@@ -1,0 +1,74 @@
+# Orquestracao SOMENTE para desenvolvimento local.
+#
+# Em producao, backend, banco e frontend podem rodar em servidores
+# diferentes, sem rede Docker compartilhada entre eles - toda a
+# comunicacao acontece via variaveis de ambiente / URLs publicas
+# (arquivos .env de cada servico), nunca via nome de servico Docker.
+#
+# Por isso, mesmo aqui em dev, o frontend fala com o backend pela porta
+# publicada no host (localhost:${BACKEND_PORT}), e nao por um hostname
+# interno do Compose - simulando o mesmo caminho que existiria com os
+# servicos em maquinas separadas.
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "${BACKEND_PORT:-8000}:80"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+    env_file:
+      - ./backend/.env
+    environment:
+      RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ponto-de-resgate-net
+
+  db:
+    image: mysql:8.4
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-ponto_de_resgate}"
+      MYSQL_USER: "${DB_USERNAME:-ponto_de_resgate}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-secret}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-root}"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ponto-de-resgate-net
+
+  frontend:
+    build:
+      context: ./frontend
+      target: build
+      args:
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8000}"
+    command: ["npm", "run", "dev", "--", "--host"]
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    env_file:
+      - ./frontend/.env
+    networks:
+      - ponto-de-resgate-net
+
+networks:
+  ponto-de-resgate-net:
+    driver: bridge
+
+volumes:
+  db_data:
+  backend_vendor:
+  frontend_node_modules:
