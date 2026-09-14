@@ -1,0 +1,109 @@
+<script setup>
+defineProps({
+  rescueRequests: {
+    type: Array,
+    default: () => [],
+  },
+  selectedId: {
+    type: Number,
+    default: null,
+  },
+})
+
+const emit = defineEmits(['select', 'assume', 'complete', 'cancel', 'share'])
+
+const STATUS_LABELS = {
+  pendente: 'Pendente',
+  em_resgate: 'Em resgate',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+}
+
+const STATUS_COLORS = {
+  pendente: 'error',
+  em_resgate: 'primary',
+  concluido: 'success',
+  cancelado: 'grey',
+}
+
+function formatDateTime(value) {
+  return new Date(value).toLocaleString('pt-BR')
+}
+</script>
+
+<template>
+  <div class="rescue-requests-list">
+    <v-card
+      v-for="rescueRequest in rescueRequests"
+      :key="rescueRequest.id"
+      class="mb-2 pa-3"
+      :variant="rescueRequest.id === selectedId ? 'tonal' : 'outlined'"
+      :color="rescueRequest.id === selectedId ? 'primary' : undefined"
+      @click="emit('select', rescueRequest.id)"
+    >
+      <div class="d-flex align-center justify-space-between mb-1">
+        <v-chip :color="STATUS_COLORS[rescueRequest.status]" size="small" variant="flat">
+          {{ STATUS_LABELS[rescueRequest.status] }}
+        </v-chip>
+        <span class="text-caption text-medium-emphasis">{{ formatDateTime(rescueRequest.created_at) }}</span>
+      </div>
+
+      <div class="text-subtitle-2">{{ rescueRequest.requester_name || 'Pedido sem nome informado' }}</div>
+      <div class="text-body-2 text-medium-emphasis">
+        {{ rescueRequest.total_people ?? '?' }} pessoa(s)
+        <span v-if="rescueRequest.animals_count">· {{ rescueRequest.animals_count }} animal(is)</span>
+      </div>
+      <div v-if="rescueRequest.reference_point" class="text-body-2 text-medium-emphasis">
+        Referência: {{ rescueRequest.reference_point }}
+      </div>
+      <div v-if="rescueRequest.operator" class="text-body-2 text-medium-emphasis">
+        Operador responsável: {{ rescueRequest.operator.name }}
+      </div>
+      <div v-if="rescueRequest.cancellation_reason" class="text-body-2 text-medium-emphasis">
+        Motivo do cancelamento: {{ rescueRequest.cancellation_reason }}
+      </div>
+
+      <div class="d-flex flex-wrap ga-2 mt-3">
+        <v-btn
+          v-if="rescueRequest.status === 'pendente'"
+          size="small"
+          color="primary"
+          @click.stop="emit('assume', rescueRequest)"
+        >
+          Assumir
+        </v-btn>
+        <v-btn
+          v-if="rescueRequest.status === 'em_resgate'"
+          size="small"
+          color="success"
+          @click.stop="emit('complete', rescueRequest)"
+        >
+          Concluir
+        </v-btn>
+        <v-btn
+          v-if="['pendente', 'em_resgate'].includes(rescueRequest.status)"
+          size="small"
+          color="error"
+          variant="outlined"
+          @click.stop="emit('cancel', rescueRequest)"
+        >
+          Cancelar
+        </v-btn>
+        <v-btn size="small" variant="text" prepend-icon="mdi-share-variant" @click.stop="emit('share', rescueRequest)">
+          Compartilhar localização
+        </v-btn>
+      </div>
+    </v-card>
+
+    <p v-if="!rescueRequests.length" class="text-center text-medium-emphasis py-8">
+      Nenhum pedido encontrado.
+    </p>
+  </div>
+</template>
+
+<style scoped>
+.rescue-requests-list {
+  height: 100%;
+  overflow-y: auto;
+}
+</style>
