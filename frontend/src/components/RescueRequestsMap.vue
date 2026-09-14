@@ -28,6 +28,7 @@ const STATUS_COLORS = {
 }
 
 let map = null
+let hasFitBounds = false
 const markers = new Map()
 
 function buildIcon(status, isSelected) {
@@ -64,6 +65,16 @@ function rebuildMarkers() {
 
     markers.set(rescueRequest.id, marker)
   })
+
+  // Centraliza no conjunto de pedidos assim que eles chegam, já que a
+  // implantação não está necessariamente na região do centro padrão do
+  // mapa. Só faz isso uma vez, para não atrapalhar o operador reposicionando
+  // o mapa a cada atualização/mudança de status.
+  if (!hasFitBounds && markers.size > 0) {
+    const bounds = L.featureGroup([...markers.values()]).getBounds()
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+    hasFitBounds = true
+  }
 }
 
 function refreshSelection() {
@@ -73,6 +84,10 @@ function refreshSelection() {
       return
     }
     marker.setIcon(buildIcon(rescueRequest.status, id === props.selectedId))
+    // Fecha o tooltip de qualquer marcador que não seja mais o selecionado,
+    // já que abri-lo via openTooltip() não fecha automaticamente ao trocar
+    // de seleção (diferente do comportamento padrão de hover).
+    marker.closeTooltip()
   })
 
   if (props.selectedId && markers.has(props.selectedId)) {

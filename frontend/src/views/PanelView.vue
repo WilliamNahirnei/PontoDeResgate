@@ -10,6 +10,7 @@ const selectedId = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
+const shareFeedback = ref(false)
 
 async function fetchRescueRequests() {
   loading.value = true
@@ -64,8 +65,16 @@ function shareLocation(rescueRequest) {
 
   if (navigator.share) {
     navigator.share({ title: 'Localização do pedido de resgate', url }).catch(() => {})
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(url)
+    return
+  }
+
+  if (navigator.clipboard) {
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        shareFeedback.value = true
+      })
+      .catch(() => {})
   }
 }
 
@@ -107,6 +116,10 @@ onMounted(fetchRescueRequests)
       @update:model-value="(value) => { if (!value) cancelDialogRequest = null }"
       @confirm="handleCancelConfirm"
     />
+
+    <v-snackbar v-model="shareFeedback" timeout="2500">
+      Localização copiada para a área de transferência.
+    </v-snackbar>
   </div>
 </template>
 
