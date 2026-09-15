@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\RescueRequestStatus;
 use App\Http\Requests\RescueRequest\CancelRescueRequestRequest;
+use App\Http\Requests\RescueRequest\IndexRescueRequestRequest;
 use App\Http\Requests\RescueRequest\StoreRescueRequestRequest;
 use App\Http\Resources\RescueRequestResource;
 use App\Models\RescueRequest;
@@ -27,11 +28,46 @@ class RescueRequestController extends Controller
         ], 201);
     }
 
-    public function index(): AnonymousResourceCollection
+    /**
+     * Quantity columns that accept a "min_<column>" filter, keyed by the query parameter name.
+     *
+     * @var array<string, string>
+     */
+    private const QUANTITY_FILTERS = [
+        'min_total_people' => 'total_people',
+        'min_men_count' => 'men_count',
+        'min_women_count' => 'women_count',
+        'min_children_count' => 'children_count',
+        'min_elderly_count' => 'elderly_count',
+        'min_animals_count' => 'animals_count',
+    ];
+
+    public function index(IndexRescueRequestRequest $request): AnonymousResourceCollection
     {
-        $rescueRequests = RescueRequest::query()
+        $sortBy = $request->validated('sort_by', 'created_at');
+        $sortDirection = $request->validated('sort_direction', 'desc');
+
+        $query = RescueRequest::query()
             ->with('operator')
-            ->latest()
+            ->when(
+                $request->filled('status'),
+                fn ($query) => $query->where('status', $request->validated('status'))
+            );
+
+        foreach (self::QUANTITY_FILTERS as $param => $column) {
+            $query->when(
+                $request->filled($param),
+                // Só considera pedidos com a informação preenchida: um pedido sem
+                // essa quantidade informada não pode "satisfazer" um filtro mínimo.
+                fn ($query) => $query->whereNotNull($column)->where($column, '>=', $request->validated($param))
+            );
+        }
+
+        $rescueRequests = $query
+            // Coloca os pedidos sem a informação preenchida sempre por último,
+            // independente da direção escolhida para a ordenação.
+            ->orderByRaw("{$sortBy} IS NULL")
+            ->orderBy($sortBy, $sortDirection)
             ->get();
 
         return RescueRequestResource::collection($rescueRequests);

@@ -55,6 +55,8 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Ao carregar os pedidos, o mapa se ajusta automaticamente para enquadrar todos eles (não fica centralizado num local fixo/padrão) — a implantação do sistema pode ser em qualquer cidade, então o mapa não pode presumir uma região. Esse enquadramento automático acontece apenas na primeira carga dos pedidos; atualizações e mudanças de status seguintes não reposicionam o mapa, para não atrapalhar o operador.
 - **Lista**: visualização alternativa ao mapa, em formato de lista de pedidos.
 - Ao clicar em um pedido na lista, ele fica em destaque no mapa e informações sobre ele aparecem. Ao clicar em outro pedido, as informações do pedido clicado anteriormente no mapa não são mais mostradas — somente as do novo pedido clicado.
+- **Filtros**: os pedidos exibidos (mapa e lista) podem ser filtrados por status. Também é possível filtrar por quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais —, considerando apenas os pedidos que tiverem essa informação preenchida (campos opcionais no formulário público).
+- **Ordenação**: a lista de pedidos pode ser ordenada, de forma crescente ou decrescente, pela data/hora do pedido ou pelas quantidades de pessoas (total, homens, mulheres, crianças, idosos, animais).
 
 ### 4.2 Gestão de status do pedido
 - **Assumir pedido**: altera o status para **"em_resgate"** e registra o operador responsável pelo atendimento.
