@@ -1,0 +1,11 @@
+{
+    "name": "Resgates",
+    "alias": "resgates",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Resgates\\Providers\\ResgatesServiceProvider"
+    ],
+    "files": []
+}

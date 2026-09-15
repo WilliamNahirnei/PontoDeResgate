@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\RescueRequestStatus;
-use App\Models\RescueRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Resgates\Enums\RescueRequestStatus;
+use Modules\Resgates\Models\RescueRequest;
 use Tests\TestCase;
 
 class RescueRequestPublicSubmissionTest extends TestCase

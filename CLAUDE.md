@@ -35,6 +35,14 @@ O Laravel Boost é dependência de dev, mas a imagem builda com `--no-dev`. Se o
 docker compose exec backend composer install
 ```
 
+## Arquitetura modular do backend
+
+O backend organiza o código por domínio de negócio (não por tipo técnico), usando
+`nwidart/laravel-modules`. As regras e exemplos estão em `backend/.ai/rules/` (arquivo
+`modules-architecture.md`, indexado em `index.md`) — o próprio `backend/CLAUDE.md`
+(gerado pelo Boost) já instrui a ler esse índice automaticamente antes de criar, mover
+ou editar qualquer arquivo em `backend/app/` ou `backend/Modules/`.
+
 ## Convenções de código
 
 Para convenções específicas de código Laravel (geradas pelo Boost), veja @backend/CLAUDE.md.

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Usuarios\Enums\UserRole;
+use Modules\Usuarios\Models\User;
 use Tests\TestCase;
 
 class OperatorManagementTest extends TestCase

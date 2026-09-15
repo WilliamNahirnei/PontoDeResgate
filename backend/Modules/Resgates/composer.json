@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/resgates",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Resgates\\": "app/",
+            "Modules\\Resgates\\Database\\Factories\\": "database/factories/",
+            "Modules\\Resgates\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Resgates\\Tests\\": "tests/"
+        }
+    }
+}

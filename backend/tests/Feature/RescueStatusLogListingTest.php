@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\RescueStatusLog;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Resgates\Models\RescueStatusLog;
+use Modules\Usuarios\Models\User;
 use Tests\TestCase;
 
 class RescueStatusLogListingTest extends TestCase
