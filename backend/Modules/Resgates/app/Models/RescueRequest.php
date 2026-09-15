@@ -32,6 +32,9 @@ class RescueRequest extends Model
     /** @use HasFactory<RescueRequestFactory> */
     use HasFactory, SoftDeletes;
 
+    /**
+     * Resolve the factory used to build instances of this model in tests/seeders.
+     */
     protected static function newFactory(): RescueRequestFactory
     {
         return RescueRequestFactory::new();
@@ -52,6 +55,8 @@ class RescueRequest extends Model
     }
 
     /**
+     * The operator currently assigned to this rescue request, if any.
+     *
      * @return BelongsTo<User, $this>
      */
     public function operator(): BelongsTo
@@ -60,6 +65,8 @@ class RescueRequest extends Model
     }
 
     /**
+     * The full history of status changes for this rescue request.
+     *
      * @return HasMany<RescueStatusLog, $this>
      */
     public function statusLogs(): HasMany

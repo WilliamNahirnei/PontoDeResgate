@@ -6,6 +6,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class LoginRequest extends FormRequest
 {
+    /**
+     * Anyone may attempt to log in.
+     */
     public function authorize(): bool
     {
         return true;

@@ -23,6 +23,9 @@ class IndexRescueRequestRequest extends FormRequest
         'animals_count',
     ];
 
+    /**
+     * Authorization is enforced at the route level (auth:sanctum middleware).
+     */
     public function authorize(): bool
     {
         return true;

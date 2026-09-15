@@ -21,6 +21,9 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Resolve the factory used to build instances of this model in tests/seeders.
+     */
     protected static function newFactory(): UserFactory
     {
         return UserFactory::new();
@@ -41,17 +44,25 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Whether this user has the "admin_master" role.
+     */
     public function isAdminMaster(): bool
     {
         return $this->role === UserRole::AdminMaster;
     }
 
+    /**
+     * Whether this user has the "operador" role.
+     */
     public function isOperador(): bool
     {
         return $this->role === UserRole::Operador;
     }
 
     /**
+     * Rescue requests this user has handled as the assigned operator.
+     *
      * @return HasMany<RescueRequest, $this>
      */
     public function rescueRequestsAsOperator(): HasMany

@@ -16,6 +16,9 @@ class RescueStatusLog extends Model
     /** @use HasFactory<RescueStatusLogFactory> */
     use HasFactory;
 
+    /**
+     * Resolve the factory used to build instances of this model in tests/seeders.
+     */
     protected static function newFactory(): RescueStatusLogFactory
     {
         return RescueStatusLogFactory::new();
@@ -35,6 +38,8 @@ class RescueStatusLog extends Model
     }
 
     /**
+     * The rescue request this log entry belongs to.
+     *
      * @return BelongsTo<RescueRequest, $this>
      */
     public function rescueRequest(): BelongsTo
@@ -43,6 +48,8 @@ class RescueStatusLog extends Model
     }
 
     /**
+     * The operator who performed this status change.
+     *
      * @return BelongsTo<User, $this>
      */
     public function operator(): BelongsTo

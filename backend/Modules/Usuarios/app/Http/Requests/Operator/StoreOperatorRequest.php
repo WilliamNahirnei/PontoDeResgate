@@ -7,6 +7,9 @@ use Illuminate\Validation\Rules\Password;
 
 class StoreOperatorRequest extends FormRequest
 {
+    /**
+     * Only an authenticated admin master may register new operators.
+     */
     public function authorize(): bool
     {
         return $this->user()?->isAdminMaster() ?? false;

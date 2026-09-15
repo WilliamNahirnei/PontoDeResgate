@@ -3,6 +3,10 @@
 namespace Modules\Resgates\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Resgates\Repositories\Contracts\RescueRequestRepositoryInterface;
+use Modules\Resgates\Repositories\Contracts\RescueStatusLogRepositoryInterface;
+use Modules\Resgates\Repositories\RescueRequestRepository;
+use Modules\Resgates\Repositories\RescueStatusLogRepository;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class ResgatesServiceProvider extends ModuleServiceProvider
@@ -32,6 +36,18 @@ class ResgatesServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         RouteServiceProvider::class,
     ];
+
+    /**
+     * Register the module's sub-providers and bind its repository interfaces
+     * to their Eloquent implementations.
+     */
+    public function register(): void
+    {
+        parent::register();
+
+        $this->app->bind(RescueRequestRepositoryInterface::class, RescueRequestRepository::class);
+        $this->app->bind(RescueStatusLogRepositoryInterface::class, RescueStatusLogRepository::class);
+    }
 
     /**
      * Define module schedules.

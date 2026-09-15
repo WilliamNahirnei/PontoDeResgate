@@ -6,6 +6,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CancelRescueRequestRequest extends FormRequest
 {
+    /**
+     * Authorization is enforced at the route level (auth:sanctum middleware).
+     */
     public function authorize(): bool
     {
         return true;

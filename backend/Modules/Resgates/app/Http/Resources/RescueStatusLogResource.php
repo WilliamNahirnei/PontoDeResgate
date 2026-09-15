@@ -9,6 +9,8 @@ use Modules\Usuarios\Http\Resources\UserResource;
 class RescueStatusLogResource extends JsonResource
 {
     /**
+     * Transform the status-change audit log entry into its public JSON representation.
+     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array

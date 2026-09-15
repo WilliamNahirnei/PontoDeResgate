@@ -3,6 +3,8 @@
 namespace Modules\Usuarios\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Usuarios\Repositories\Contracts\UserRepositoryInterface;
+use Modules\Usuarios\Repositories\UserRepository;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class UsuariosServiceProvider extends ModuleServiceProvider
@@ -32,6 +34,17 @@ class UsuariosServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         RouteServiceProvider::class,
     ];
+
+    /**
+     * Register the module's sub-providers and bind {@see UserRepositoryInterface}
+     * to its Eloquent implementation.
+     */
+    public function register(): void
+    {
+        parent::register();
+
+        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+    }
 
     /**
      * Define module schedules.

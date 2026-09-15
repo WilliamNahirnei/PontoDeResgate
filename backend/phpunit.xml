@@ -7,14 +7,20 @@
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
+            <directory>Modules/Usuarios/tests/Unit</directory>
+            <directory>Modules/Resgates/tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <directory>Modules/Usuarios/tests/Feature</directory>
+            <directory>Modules/Resgates/tests/Feature</directory>
         </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>app</directory>
+            <directory>Modules/Usuarios/app</directory>
+            <directory>Modules/Resgates/app</directory>
         </include>
     </source>
     <php>

@@ -6,11 +6,16 @@ use Closure;
 use Illuminate\Http\Request;
 use Modules\Usuarios\Enums\UserRole;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class EnsureUserHasRole
 {
     /**
-     * Handle an incoming request.
+     * Abort with a 403 unless the authenticated user has one of the given roles.
+     *
+     * @param  string  ...$roles  One or more {@see UserRole} values (e.g. "admin_master", "operador").
+     *
+     * @throws HttpException When there is no user, or their role is not allowed (403).
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {

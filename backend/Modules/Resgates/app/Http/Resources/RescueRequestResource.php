@@ -9,6 +9,8 @@ use Modules\Usuarios\Http\Resources\UserResource;
 class RescueRequestResource extends JsonResource
 {
     /**
+     * Transform the rescue request into its public JSON representation.
+     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array

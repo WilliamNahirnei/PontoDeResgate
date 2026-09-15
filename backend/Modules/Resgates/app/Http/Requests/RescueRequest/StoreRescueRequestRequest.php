@@ -6,6 +6,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRescueRequestRequest extends FormRequest
 {
+    /**
+     * Anyone may submit a rescue request — this is a public endpoint.
+     */
     public function authorize(): bool
     {
         return true;
