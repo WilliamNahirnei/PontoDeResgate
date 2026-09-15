@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'role' => UserRole::Operador,
+            'active' => true,
         ];
     }
 
@@ -52,6 +53,16 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role' => UserRole::AdminMaster,
+        ]);
+    }
+
+    /**
+     * Indicate that the user has been deactivated.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'active' => false,
         ]);
     }
 }

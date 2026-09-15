@@ -36,6 +36,19 @@ class AuthenticationTest extends TestCase
         $response->assertJsonValidationErrors(['email']);
     }
 
+    public function test_deactivated_user_cannot_login(): void
+    {
+        $user = User::factory()->inactive()->create(['password' => 'senha-secreta']);
+
+        $response = $this->postJson('/api/login', [
+            'email' => $user->email,
+            'password' => 'senha-secreta',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['email']);
+    }
+
     public function test_authenticated_user_can_logout(): void
     {
         $user = User::factory()->create();

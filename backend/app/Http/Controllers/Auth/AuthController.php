@@ -25,6 +25,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if (! $user->active) {
+            throw ValidationException::withMessages([
+                'email' => ['Este usuário foi desativado.'],
+            ]);
+        }
+
         $token = $user->createToken('painel-operador')->plainTextToken;
 
         return response()->json([

@@ -72,8 +72,24 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Novo status.
   - Data/hora da mudança.
 
-### 4.4 Cadastro de operadores (admin master)
+### 4.4 Cadastro e gestão de operadores (admin master)
 - O admin master é responsável por cadastrar novos operadores/voluntários no sistema.
+- A tela do admin master possui um ponto de navegação para a lista de operadores.
+- **Lista de operadores**:
+  - Exibe os dados dos operadores cadastrados.
+  - Possui um botão para desativar um operador específico.
+  - Um operador desativado pode ser reativado.
+  - Possui filtro por nome do operador.
+  - Possui filtro por e-mail do operador.
+  - É paginada.
+  - Possui um botão que direciona para o cadastro de um novo operador.
+- Um operador desativado não consegue autenticar-se no sistema.
+- Operadores (que não sejam admin master) não têm acesso à lista de operadores nem ao cadastro de novos operadores — essas telas e os respectivos endpoints são exclusivos do admin master.
+
+### 4.5 Consulta de logs de operações (admin master)
+- Junto aos itens de navegação para o painel principal e para a lista de operadores, o admin master tem acesso a um menu para a lista de logs (`rescue_status_logs`) das operações realizadas sobre os pedidos de resgate.
+- A lista de logs é paginada.
+- Operadores (que não sejam admin master) não têm acesso a essa tela nem ao endpoint correspondente — exclusivo do admin master.
 
 ## 5. Alertas em tempo real (websocket leve)
 
@@ -118,3 +134,10 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 ### Usuário (operador / admin master)
 - Autenticação via Laravel Sanctum (Bearer token).
 - Papel: operador ou admin master.
+
+## 9. Ambiente de desenvolvimento
+
+- O `DatabaseSeeder` (`backend/database/seeders/DatabaseSeeder.php`) cria automaticamente um usuário admin master padrão ao rodar as migrations/seeds:
+  - E-mail: `admin@pontoderesgate.local`
+  - Senha: `password`
+- Esse usuário existe apenas em ambiente de desenvolvimento, para permitir o primeiro acesso ao painel e o cadastro dos demais operadores. Não deve ser usado em produção.

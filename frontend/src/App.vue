@@ -23,6 +23,23 @@ async function handleLogout() {
     <v-app-bar v-if="showPanelBar" color="primary" density="comfortable">
       <v-app-bar-title>Ponto de Resgate — Painel</v-app-bar-title>
       <template #append>
+        <v-btn variant="text" :to="{ name: 'panel' }" class="mr-2 text-none"> Painel </v-btn>
+        <v-btn
+          v-if="authStore.user?.role === 'admin_master'"
+          variant="text"
+          :to="{ name: 'operators-list' }"
+          class="mr-2 text-none"
+        >
+          Operadores
+        </v-btn>
+        <v-btn
+          v-if="authStore.user?.role === 'admin_master'"
+          variant="text"
+          :to="{ name: 'logs-list' }"
+          class="mr-2 text-none"
+        >
+          Logs
+        </v-btn>
         <span class="text-body-2 mr-4">{{ authStore.user?.name }}</span>
         <v-btn variant="text" @click="handleLogout">Sair</v-btn>
       </template>
