@@ -52,4 +52,13 @@ class RescueRequestPublicSubmissionTest extends TestCase
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['latitude', 'longitude']);
     }
+
+    public function test_the_requester_has_no_endpoint_to_view_or_edit_the_submitted_request(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create();
+
+        $this->getJson("/api/rescue-requests/{$rescueRequest->id}")->assertNotFound();
+        $this->putJson("/api/rescue-requests/{$rescueRequest->id}", ['requester_name' => 'Outro nome'])->assertNotFound();
+        $this->patchJson("/api/rescue-requests/{$rescueRequest->id}", ['requester_name' => 'Outro nome'])->assertNotFound();
+    }
 }

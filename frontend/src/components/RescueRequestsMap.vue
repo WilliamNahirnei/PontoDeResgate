@@ -62,6 +62,11 @@ function rebuildMarkers() {
 
     marker.on('click', () => emit('select', rescueRequest.id))
     marker.addTo(map)
+    // Identificador estável por marcador: sem isso, não há como um teste E2E
+    // (ou qualquer script) mirar um pedido específico em meio a vários
+    // marcadores equivalentes no mapa (exceção documentada em
+    // frontend/.ai/rules/e2e-testing.md para quando role/texto são ambíguos).
+    marker.getElement()?.setAttribute('data-testid', `rescue-request-marker-${rescueRequest.id}`)
 
     markers.set(rescueRequest.id, marker)
   })

@@ -87,13 +87,22 @@ seção acima sobre por que a suíte roda via Docker.
 
 ## Cobertura e prioridade
 
-Ordem de entrega recomendada (do que já existe para o que falta):
-1. `login.spec.ts` — smoke test do stack inteiro (CORS, Sanctum, guarda de rota).
-2. `public-request.spec.ts` — fluxo público crítico do produto (inclui interação com o
-   mapa Leaflet via `LocationPickerMap.vue`).
-3. Painel (listar/filtrar/assumir/cancelar pedido) — a fazer.
-4. Gestão de operadores (admin master) — a fazer.
-5. Logs de status — a fazer, por último (tela de leitura/auditoria).
+Todos os fluxos abaixo já têm spec (rastreabilidade cenário a cenário em
+`docs/test-plans/`, comece por `docs/test-plans/index.md`):
+1. `login.spec.ts` — smoke test do stack inteiro (CORS, Sanctum, guarda de rota, logout).
+2. `public-request.spec.ts` — fluxo público crítico do produto (mapa Leaflet via
+   `LocationPickerMap.vue`, incluindo geolocalização automática).
+3. `panel-viewing.spec.ts` e `panel-filters-sorting.spec.ts` — painel (visualização no
+   mapa/lista, filtros, ordenação).
+4. `panel-status-management.spec.ts` — assumir/concluir/cancelar pedido, compartilhar
+   localização, fluxo ponta a ponta do painel.
+5. `operators.spec.ts` e `panel-navigation.spec.ts` — gestão de operadores (admin master)
+   e navegação condicional por papel.
+6. `rescue-status-logs.spec.ts` — tela de logs de auditoria (admin master).
+
+Único item de `REQUISITOS.md` sem teste (porque a própria funcionalidade não foi
+localizada no código): alertas em tempo real via websocket (§5) — ver `CRZ-05` em
+`docs/test-plans/integrado.md`.
 
 ## Dados de teste
 
@@ -117,9 +126,15 @@ Ordem de entrega recomendada (do que já existe para o que falta):
 
 ## Seletores
 
-Preferir `getByRole`/`getByLabel`/`getByText` (não existe nenhum `data-testid` no
-frontend hoje). Usar `data-testid` apenas como exceção documentada, quando o seletor por
-role/texto for ambíguo (ex.: múltiplos botões "Cancelar" na mesma tela).
+Preferir `getByRole`/`getByLabel`/`getByText`. Usar `data-testid` apenas como exceção
+documentada, quando o seletor por role/texto for ambíguo (ex.: múltiplos botões
+"Cancelar" na mesma tela).
+
+**Exceção em uso:** os marcadores do mapa do painel (`RescueRequestsMap.vue`) recebem
+`data-testid="rescue-request-marker-<id>"` — não há texto/role que distinga um marcador
+específico entre vários pedidos plotados simultaneamente (todos são `<span>` dentro de um
+`div.leaflet-marker-icon` equivalente), e o ID do pedido já é conhecido pelo teste (retorno
+da chamada HTTP que o criou).
 
 ## Page Object Model
 

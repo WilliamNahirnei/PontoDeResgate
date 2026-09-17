@@ -34,4 +34,20 @@ test.describe('Login', () => {
 
     await expect(page).not.toHaveURL(/\/login$/)
   })
+
+  test('logout pela UI encerra a sessão e redireciona ao login', async ({ page, loginAsAdminMaster }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+
+    await page.getByRole('button', { name: 'Sair' }).click()
+
+    await expect(page).toHaveURL(/\/login$/)
+
+    // Não navega de novo para /painel aqui: o loginAsAdminMaster injeta a
+    // sessão via addInitScript, que roda a cada novo carregamento de
+    // documento na página — uma segunda navegação reinjetaria o token e
+    // mascararia o logout. Basta confirmar que o storage foi limpo.
+    const remainingToken = await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))
+    expect(remainingToken).toBeNull()
+  })
 })
