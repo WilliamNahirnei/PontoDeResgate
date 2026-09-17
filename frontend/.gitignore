@@ -41,3 +41,8 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Playwright
+/playwright-report/
+/test-results/
+/blob-report/

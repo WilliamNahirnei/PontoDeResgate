@@ -11,6 +11,27 @@
                 "artisan",
                 "boost:mcp"
             ]
+        },
+        "playwright": {
+            "command": "docker",
+            "args": [
+                "run",
+                "--rm",
+                "-i",
+                "--network",
+                "host",
+                "-e",
+                "DISPLAY",
+                "-v",
+                "/tmp/.X11-unix:/tmp/.X11-unix:ro",
+                "mcr.microsoft.com/playwright:v1.63.0-noble",
+                "npx",
+                "@playwright/mcp@latest",
+                "--browser",
+                "chromium",
+                "--viewport-size",
+                "1280,720"
+            ]
         }
     }
 }

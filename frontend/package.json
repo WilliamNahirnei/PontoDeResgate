@@ -9,7 +9,15 @@
     "preview": "vite preview",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache"
+    "lint:eslint": "eslint . --fix --cache",
+    "test:e2e": "npm run test:e2e:reset && npm run test:e2e:run",
+    "test:e2e:reset": "docker compose -f ../docker-compose.yml exec -T backend php artisan migrate:fresh --seed",
+    "test:e2e:install": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -v \"$(pwd):/app\" -w /app mcr.microsoft.com/playwright:v1.63.0-noble npm install",
+    "test:e2e:run": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -v \"$(pwd):/app\" -w /app -e E2E_BASE_URL=http://localhost:5183 -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test",
+    "test:e2e:ui": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -v \"$(pwd):/app\" -w /app -e E2E_BASE_URL=http://localhost:5183 -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test --ui-host=127.0.0.1 --ui-port=9324",
+    "test:e2e:headed": "docker run --rm --network host -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:ro -v \"$(pwd):/app\" -w /app -e E2E_BASE_URL=http://localhost:5183 -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test --headed --workers=1; status=$?; sh e2e/scripts/fix-report-ownership.sh; exit $status",
+    "test:e2e:headed:slow": "docker run --rm --network host -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:ro -v \"$(pwd):/app\" -w /app -e E2E_BASE_URL=http://localhost:5183 -e PW_SLOWMO=\"${PW_SLOWMO:-1500}\" -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test --headed --workers=1; status=$?; sh e2e/scripts/fix-report-ownership.sh; exit $status",
+    "test:e2e:report": "docker run --rm --network host --user \"$(id -u):$(id -g)\" -v \"$(pwd):/app\" -w /app -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright show-report"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -22,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "eslint": "^10.7.0",
     "eslint-plugin-oxlint": "~1.73.0",
