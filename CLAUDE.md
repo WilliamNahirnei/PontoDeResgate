@@ -66,13 +66,15 @@ cd frontend && npm run test:e2e
 
 ## Test plans (QA)
 
-Documentos de planejamento/rastreabilidade de testes — cobertura prospectiva completa
-por funcionalidade, cenário a cenário, com status (`Implementado`/`Planejado`/`Não
-coberto`/`Não implementado`) e link para o teste automatizado real quando existir — estão
+Documentos de planejamento/rastreabilidade de **testes funcionais** — o comportamento do
+sistema rodando, verificado em Playwright ou por exploração manual; cobertura prospectiva
+completa por funcionalidade, cenário a cenário, com status (`Implementado`/`Planejado`/`Não
+coberto`/`Não implementado`) e link para o spec Playwright real quando existir — estão
 em `docs/test-plans/` (um arquivo por módulo de negócio, `usuarios.md`/`resgates.md`,
 mais `integrado.md` com a matriz de rastreabilidade e os fluxos cross-module). Comece por
-`docs/test-plans/index.md`. Ao escrever um teste novo, atualize a linha correspondente no
-mesmo PR (ver convenção documentada em `docs/test-plans/index.md`).
+`docs/test-plans/index.md`. Testes Unit e de endpoint (Feature) do backend testam código e
+**não entram nos planos**. Ao escrever um spec Playwright novo, atualize a linha
+correspondente no mesmo PR (ver convenção documentada em `docs/test-plans/index.md`).
 
 ## Ferramentas de automação de browser (Claude)
 
