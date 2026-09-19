@@ -2,7 +2,7 @@
 
 > Cobertura prospectiva completa das funcionalidades do módulo `backend/Modules/Usuarios`
 > (autenticação, papéis, gestão de operadores), com base em
-> [`REQUISITOS.md`](../../REQUISITOS.md) §2 e §4.4. Cenários que cruzam Usuarios e
+> [`REQUISITOS.md`](../../REQUISITOS.md) §2, §4.4 e §9. Cenários que cruzam Usuarios e
 > Resgates não aparecem aqui — ver [`integrado.md`](./integrado.md).
 
 ## Legenda de status
@@ -40,6 +40,10 @@
 | USR-20 | Painel (guarda de rota) | E2E | Acesso ao painel sem sessão redireciona para o login | Implementado | `frontend/e2e/tests/login.spec.ts` ("acesso ao painel sem sessão redireciona para o login") | |
 | USR-21 | Painel (guarda de rota) | E2E | Sessão de admin master injetada acessa o painel diretamente, sem passar pela tela de login | Implementado | `frontend/e2e/tests/login.spec.ts` ("sessão de admin master acessa o painel diretamente") | |
 | USR-22 | LoginView / Painel | E2E | Logout pela UI encerra a sessão e redireciona ao login | Implementado | `frontend/e2e/tests/login.spec.ts` ("logout pela UI encerra a sessão e redireciona ao login") | |
+| USR-58 | Painel (guarda de rota) | Feature | Visitante não autenticado não pode assumir, concluir nem cancelar um pedido (401) | Não coberto | — | USR-17 só cobre `GET /api/rescue-requests`. As três ações compartilham o middleware `auth:sanctum`, mas nada quebraria se uma rota saísse do grupo. |
+| USR-59 | Painel (guarda de rota) | Feature | Visitante não autenticado não acessa `GET /api/me` (401) | Não coberto | — | |
+| USR-60 | Login (endpoint) | Feature | Token emitido a um operador que depois foi desativado é rejeitado (401) ao acessar o painel | Não coberto | — | USR-52 só confere que a contagem de `personal_access_tokens` é 0 (autenticando via `actingAs`); nenhum teste reutiliza o token real com o header Bearer depois da desativação (`REQUISITOS.md` §4.4). |
+| USR-61 | Painel (sessão revogada) | E2E | Operador desativado com o painel já aberto é levado à tela de login na próxima requisição | Não implementado | — | `frontend/src/services/api.js` só tem interceptor de requisição, nenhum de resposta para 401: a sessão continua exibindo o painel com as chamadas falhando. `REQUISITOS.md` §4.4 só define que o desativado não se autentica; o comportamento da sessão já aberta não está especificado — confirmar o requisito antes de implementar ou testar. |
 
 ## 2. Gestão de operadores (admin master)
 
@@ -80,3 +84,11 @@
 | USR-55 | OperatorsListView | E2E | Lista de operadores: filtro por nome/e-mail e paginação pela UI | Implementado | `frontend/e2e/tests/operators.spec.ts` ("lista de operadores pode ser filtrada por nome e por e-mail", "lista de operadores é paginada") | |
 | USR-56 | OperatorsListView | E2E | Ativar/desativar operador pela UI | Implementado | `frontend/e2e/tests/operators.spec.ts` ("admin master desativa e reativa um operador pela tela") | |
 | USR-57 | Navegação do painel | E2E | Operador comum não vê o item de menu de gestão de operadores | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("operador comum não vê os itens de menu de gestão de operadores nem de logs") | |
+| USR-62 | Ativar/desativar operador (endpoint) | Feature | Desativar um usuário que não é operador (admin master) retorna 404 e não altera o usuário | Não coberto | — | Regra existe no código (`OperatorService::deactivate` → `abort_unless($operator->isOperador(), 404)`), mas não consta em `REQUISITOS.md` — decidir se vira requisito. |
+| USR-63 | Ativar/desativar operador (endpoint) | Feature | Reativar um usuário que não é operador (admin master) retorna 404 | Não coberto | — | Ver USR-62 (`OperatorService::activate`). |
+
+## 3. Dados iniciais (seed)
+
+| ID | Funcionalidade/Tela | Camada | Cenário | Status | Teste automatizado | Observação |
+|---|---|---|---|---|---|---|
+| USR-64 | DatabaseSeeder | Feature | O seed cria o admin master padrão (`admin@pontoderesgate.local`, papel `admin_master`, ativo) para o primeiro acesso | Não coberto | — | `REQUISITOS.md` §9 (somente desenvolvimento). A suíte E2E depende desse usuário (`loginAsAdminMaster`), então uma quebra do seeder só apareceria como falha em cascata no E2E. |
