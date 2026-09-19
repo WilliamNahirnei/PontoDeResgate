@@ -1,0 +1,139 @@
+Saídas das execuções complementares (2026-09-19)
+
+ATENÇÃO: estas saídas NÃO foram gravadas em arquivo na hora. Foram transcritas do terminal da sessão,
+linha a linha, como apareceram. Linhas longas saíram cortadas pelo `cut -c1-N` do filtro usado
+(N entre 300 e 640 colunas). Onde algo foi omitido, está marcado. As saídas dos charters A, B, C e D
+estão inteiras em charter-{a,b,c,d}.out; a da suíte E2E em e2e-suite.log.
+
+======================================================================================================
+0. PRÉ-VOO
+======================================================================================================
+
+$ docker compose ps
+pontoderesgate-backend-1    Up 13 hours          0.0.0.0:8180->80/tcp
+pontoderesgate-db-1         Up 13 hours (healthy) 0.0.0.0:3316->3306/tcp
+pontoderesgate-frontend-1   Up 13 hours          0.0.0.0:5183->5173/tcp
+.env da raiz: BACKEND_PORT=8180  FRONTEND_PORT=5183  DB_PORT=3316  VITE_API_BASE_URL=http://localhost:8180
+frontend/playwright.config.ts: baseURL padrão http://localhost:5183 ; e2e/fixtures/auth.ts: API padrão http://localhost:8180
+@playwright/test instalado: 1.63.0 ; 8 specs, 29 testes
+
+MCP do Playwright (tentativa de navegar):
+  Error: Browser "chrome-for-testing" is not installed; expected executable at
+  /ms-playwright/chromium-1246/chrome-linux64/chrome. Run `npx @playwright/mcp install-browser chrome-for-testing` to install
+
+Diagnóstico:
+  navegadores na imagem mcr.microsoft.com/playwright:v1.63.0-noble: chromium-1243, chromium_headless_shell-1243,
+  ffmpeg-1011, firefox-1543, webkit-2359
+  npm view @playwright/mcp -> latest 0.0.82, depende de playwright / playwright-core 1.64.0-alpha-1789764292000
+
+Smoke do script descartável:
+  titulo: Vite App | h1: Pedido de socorro
+  admin login status: 200 role: admin_master name: Admin Master
+
+Cruzamento testes executados x linhas do plano:
+  testes=29 cobertos_por_linha=29 linhas_com_spec=27 ; nenhuma linha sem teste, nenhum teste sem linha
+
+======================================================================================================
+1. charter-a2.cjs (refaz USR-76/ordem: o primeiro roteiro leu a tabela ainda em "Loading items...")
+======================================================================================================
+RESULT|USR-76/ordem|OK|1ª página (10): EXPLORATORIO 2026-09-19 A-papel | EXPLORATORIO 2026-09-19 A1-desativar | EXPLORATORIO 2026-09-19 A61-sessao | EXPLORATORIO 2026-09-19 A74 1789827796021 | EXPLORATORIO 2026-09-19 A76-aaa | EXPLORATORIO 2026-09-19 A76-zzz | Operador Ativacao 1789827621676 | Operador E2E 1789827620537 | Operador E2E 1789827623465 | Operador E2E 1789827624356 ; papéis na API=operador
+
+======================================================================================================
+2. charter-c2.cjs (refaz RES-112 e cliques de marcador com pedido em coordenada única)
+======================================================================================================
+RESULT|RES-112|OK|tooltip="3 pessoa(s) · 19/09/2026, 14:32:44" data-do-card="19/09/2026, 14:32:44"
+RESULT|EXTRA/clicar-no-marcador|OK|marcador único clicado -> card destacado na lista=true
+RESULT|EXTRA/marcadores-empilhados|OBS|maior pilha de marcadores na mesma posição da tela=48 (total de marcadores=52)
+RESULT|EXTRA/limpar-filtros-duplicado|OBS|botões "Limpar filtros" no DOM=2 (visível,visível)
+RESULT|RES-115|DIVERGE|com "Mín. animais"=3: 2 cards; após Limpar filtros: 2 cards; campos=[]
+  name: 'TimeoutError'
+(O DIVERGE de RES-115 e o "2 botões" foram artefato do seletor do Playwright, não do produto: ver item 3.)
+
+======================================================================================================
+3. debug-limpar.cjs e debug-limpar2.cjs (por que "Limpar filtros" casava com 2 elementos)
+======================================================================================================
+-- debug-limpar.cjs
+DOM com o menu aberto: {"overlays":["v-overlay--absolute.v-overlay--active.v-menu"],"limpar":[{"x":244,"y":458,"w":228,"inOverlay":true}],"numeric":6,"labels":6} | cards sem filtro: 52
+cards com Mín. animais=3: 2
+clique no botão #0 (x=228,y=118): cards antes=2 depois=2 menu-aberto=false
+(seguiu-se um TimeoutError esperando o botão #1: só existe um botão "Limpar filtros" no DOM)
+
+-- debug-limpar2.cjs
+elementos que casam com "Limpar filtros": [{"tag":"BUTTON","text":"Filtrar por quantidade","aria":null,"describedby":null,"owns":"v-menu-v-12","cls":"v-btn v-theme--light v-btn--density-default v-btn--size-defa"},{"tag":"BUTTON","text":"Limpar filtros","aria":null,"describedby":null,"owns":null,"cls":"v-btn v-btn--block v-theme--light v-btn--density-default v-b"}]
+botão real: cards antes=2 depois=52 campos=[|||||]
+RESULT|RES-115|OK|com "Mín. animais"=3: 2 cards; após clicar em "Limpar filtros" (botão do menu): 52 cards; campos=[|||||]
+Conclusão: o botão de ativação do menu tem aria-owns apontando para o menu, então o Playwright o considera dono do texto.
+
+======================================================================================================
+4. charter-d2.cjs (2ª reprodução do duplo clique)
+======================================================================================================
+RESULT|D-duplo-clique/assumir-1|OBS|logs=["pendente->em_resgate","pendente->em_resgate"] http=[]
+RESULT|D-duplo-clique/assumir-2|OBS|logs=["pendente->em_resgate","pendente->em_resgate"] http=[]
+RESULT|D-duplo-clique/assumir-3|OBS|logs=["pendente->em_resgate","pendente->em_resgate"] http=[]
+RESULT|D-duplo-clique/concluir|OBS|logs=["em_resgate->concluido","em_resgate->concluido","pendente->em_resgate"] http=[]
+(o terceiro log do caso "concluir" é o assume feito por API na preparação)
+
+======================================================================================================
+5. RES-119 (soft delete) — charter-e.cjs e charter-e2.cjs, com apagar/restaurar via tinker
+======================================================================================================
+Comandos usados (a partir da raiz do repositório; ID = id de um pedido EXPLORATORIO que já tem logs):
+  apagar:    docker compose exec -T backend php artisan tinker --execute="\Modules\Resgates\Models\RescueRequest::find(ID)->delete();"
+  restaurar: docker compose exec -T backend php artisan tinker --execute="\Modules\Resgates\Models\RescueRequest::withTrashed()->find(ID)->restore();"
+Sequência: apagar -> rodar charter-e2.cjs -> restaurar, na mesma execução, para a tela de logs ficar quebrada o mínimo possível.
+
+-- 1ª tentativa (pedido 57, logs mais antigos que a 1ª página)
+pedido escolhido (meu, EXPLORATORIO, com 2 logs): id=57
+antes: EXPLORATORIO 2026-09-19 D-ui-assumir-cancelar 1789828582060 | logs=2
+apagado (soft): sim
+RESULT|RES-119/api-1|OBS|GET /api/rescue-status-logs -> 200 {"data":[{"id":66,"rescue_request":{"id":76,"requester_name":"EXPLORATORIO 2026-09-19 D2-dbl concluir 1789828651016","reference_point":null}
+RESULT|RES-119/ui|OBS|tela de logs: alerta="" linhas=15 tabela="19/09/2026, 14:37:44 EXPLORATORIO 2026-09-19 D2-dbl concluir 1789828651016 EXPLO" http=[] erros=[]
+RESULT|RES-119/painel-continua|OBS|cards no painel=75
+RESULT|RES-119/api-2|OBS|2ª reprodução: GET /api/rescue-status-logs -> 200
+restaurado: sim
+GET /api/rescue-status-logs após restaurar -> 200
+(a 1ª página respondeu 200 porque os logs do pedido apagado estavam em outra página)
+
+-- 2ª tentativa (percorrendo todas as páginas)
+apagado (soft)
+RESULT|RES-119/api-por-pagina|OBS|p1=200 p2=200 p3=500 p4=200 p5=200 (última página=5)
+RESULT|RES-119/ui|OBS|na página 3 da tela de logs: alerta="Não foi possível carregar os logs." linhas=15 tabela="19/09/2026, 14:36:56 EXPLORATORIO 2026-09-19 D-corrida-7 178" http=[500 GET /api/rescue-status-logs?page=3&per_page=15]
+RESULT|RES-119/ui-navegacao|OBS|botão "Previous page" habilitado=true
+restaurado: sim
+p1=200 p2=200 p3=200 p4=200 p5=200 p6=200 (após restaurar)
+
+Causa no log do Laravel (probe descartável anterior, pedido na 1ª página): "Attempt to read property "id" on null" (ErrorException)
+
+======================================================================================================
+6. charter-f.cjs (extras) e CORS
+======================================================================================================
+RESULT|F-xss|OK|HTML injetado em nome/referência/operador -> {"painel":{"xss":0,"imgs":0},"logs":{"xss":0,"imgs":0},"operadores":{"xss":0,"imgs":0}}
+RESULT|F-rota-inexistente/nao-existe|OBS|url=/nao-existe texto-visível="" (vazio=true)
+RESULT|F-rota-inexistente/painel/nao-existe|OBS|url=/painel/nao-existe texto-visível="" (vazio=true)
+RESULT|F-login-sem-limite|OBS|15 logins errados seguidos -> códigos=422 (429 presente=false)
+RESULT|F-envio-publico-em-rajada|OBS|12 envios públicos seguidos do mesmo cliente -> códigos=201 (429 presente=false)
+RESULT|F-coordenadas-limites|OBS|90,180=201 -90,-180=201 90.0001,0=422 0,180.0001=422 abc,0=422
+
+CORS (curl OPTIONS /api/login, cabeçalho de resposta):
+Origin http://localhost:5183  -> Access-Control-Allow-Origin: http://localhost:5183
+Origin http://evil.example    -> Access-Control-Allow-Origin: http://localhost:5183
+
+======================================================================================================
+7. QUANTIDADE ENORME NA TELA PÚBLICA (500) — reprodução direta na API
+======================================================================================================
+colunas (migration): total_people, men_count, women_count, children_count, elderly_count, animals_count = unsignedInteger nullable
+total_people=2147483647   -> 201
+total_people=2147483648   -> 201
+total_people=4294967295   -> 201
+total_people=4294967296   -> 500
+total_people=99999999999  -> 500
+men_count=99999999999 -> 500
+animals_count=99999999999 -> 500
+Log do Laravel: SQLSTATE[22003]: Numeric value out of range: 1264 Out of range value for column 'animals_count' at row 1
+
+======================================================================================================
+8. INVENTÁRIO DOS DADOS CRIADOS (ao final da execução)
+======================================================================================================
+pedidos: total=91 EXPLORATORIO=54 (por status {'pendente': 29, 'em_resgate': 17, 'concluido': 3, 'cancelado': 5}) E2E=36 outros=1
+pedidos com quantidade absurda (>=2^31): [('EXPLORATORIO 2026-09-19 overflow 4294967295', 4294967295), ('EXPLORATORIO 2026-09-19 overflow 2147483648', 2147483648)]
+operadores: total=27 EXPLORATORIO=10 (inativos entre eles: A61-sessao, D-opA-1789828582060)
+logs de auditoria total: 68

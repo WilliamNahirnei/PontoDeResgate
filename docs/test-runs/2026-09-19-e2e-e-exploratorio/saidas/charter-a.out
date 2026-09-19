@@ -1,0 +1,22 @@
+RESULT|USR-70|OK|/painel -> /login ; /painel/operadores -> /login ; /painel/operadores/novo -> /login ; /painel/logs -> /login
+RESULT|USR-72|OK|desativado tentou entrar: url=/login mensagem="E-mail ou senha inválidos."
+RESULT|USR-73|OK|reativado tentou entrar: url=/painel
+RESULT|USR-74|OK|menus={"Painel":1,"Operadores":0,"Logs":0,"Sair":1} /painel/operadores->/painel /painel/logs->/painel
+RESULT|USR-75/vazio|OBS|submit vazio: url=/painel/operadores/novo alerta="The name field is required. (and 2 more errors)" valueMissing=[text:true,email:true,password:true]
+RESULT|USR-75/senha-fraca|OBS|senha "123": url=/painel/operadores/novo alerta="The password field must be at least 8 characters." criado=0
+RESULT|USR-69|OBS|e-mail duplicado: url=/painel/operadores/novo alerta="The email has already been taken." formulario-mantido=true
+RESULT|USR-75/nome-hostil|OBS|nome com <script> e 300 chars: url=/painel/operadores/novo alerta="The name field must not be greater than 255 characters." criado=0
+RESULT|USR-76/ordem|OK|1ª página (1): Loading items... ...
+RESULT|USR-76/sem-admin|OK|filtro e-mail "admin@": linhas=1 texto="Nenhum operador encontrado."
+RESULT|USR-77/sem-correspondencia|OK|nome de A e e-mail de B: "Nenhum operador encontrado."
+RESULT|USR-77/combinado|OK|nome e e-mail do mesmo operador: linhas=1
+RESULT|USR-77/curinga|OBS|filtro nome="%": linhas=10 (curinga LIKE do banco tratado como texto?)
+RESULT|USR-78|OK|botão "Novo operador" -> /painel/operadores/novo
+RESULT|USR-80|OK|após recarregar: url=/painel
+RESULT|USR-79|OK|voltar após sair: url=/login h1="(sem h1)" app-bar=0
+RESULT|USR-79/avançar|OK|avançar: url=/login
+RESULT|USR-61|OBS|desativado com sessão aberta (API 200): após Atualizar url=/painel alerta="Não foi possível carregar os pedidos." http=[401 GET /api/rescue-requests?sort_by=created_at&sort_direction=desc, 401 GET /api/rescue-requests?sort_by=created_at&sort_direction=desc]
+RESULT|EXTRA/token-adulterado|OBS|token inválido no localStorage: url=/painel alerta="Não foi possível carregar os pedidos." http=[401 GET /api/rescue-requests?sort_by=created_at&sort_direction=desc]
+RESULT|EXTRA/papel-adulterado|OBS|operador com role forjado no localStorage: url=/painel/operadores alerta="Não foi possível carregar os operadores." http=[403 GET /api/operators?page=1&per_page=10] linhas=1
+RESULT|EXTRA/titulo-da-aba|OBS|/="Vite App" /login="Vite App"
+FIM charter A

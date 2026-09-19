@@ -1,0 +1,18 @@
+const L = require('/work/lib.cjs')
+;(async () => {
+  const b = await L.launch(); const adm = await L.adminLogin()
+  const { page } = await L.newCtx(b, {}, { token: adm.token, user: adm.user })
+  await page.goto(L.BASE + '/painel'); await page.locator('.rescue-requests-list .v-card').first().waitFor(); await L.sleep(1200)
+  await page.getByRole('button', { name: 'Filtrar por quantidade' }).click(); await L.sleep(600)
+  const els = await page.getByRole('button', { name: 'Limpar filtros' }).evaluateAll((es) => es.map((e) => ({ tag: e.tagName, text: e.innerText.trim().slice(0, 40), aria: e.getAttribute('aria-label'), describedby: e.getAttribute('aria-describedby'), owns: e.getAttribute('aria-owns'), cls: e.className.slice(0, 60) })))
+  console.log('elementos que casam com "Limpar filtros":', JSON.stringify(els))
+  // clique como usuário: no botão dentro do menu
+  await page.getByLabel('Mín. animais').fill('3'); await L.sleep(1300)
+  const antes = await page.locator('.rescue-requests-list .v-card').count()
+  await page.locator('.v-overlay .v-btn', { hasText: 'Limpar filtros' }).click(); await L.sleep(1600)
+  const depois = await page.locator('.rescue-requests-list .v-card').count()
+  const vals = await page.$$eval('input[type=number]', (e) => e.map((x) => x.value).join('|'))
+  console.log(`botão real: cards antes=${antes} depois=${depois} campos=[${vals}]`)
+  L.rec('RES-115', depois > antes && !/[0-9]/.test(vals) ? 'OK' : 'DIVERGE', `com "Mín. animais"=3: ${antes} cards; após clicar em "Limpar filtros" (botão do menu): ${depois} cards; campos=[${vals}]`)
+  await b.close()
+})()

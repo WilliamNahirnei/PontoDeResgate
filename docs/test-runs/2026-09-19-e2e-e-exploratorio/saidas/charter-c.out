@@ -1,0 +1,31 @@
+massa criada: {"C1":45,"C2":46,"C3":47,"C4":48,"C5":49,"C6":50} lisboa= 51
+RESULT|RES-122/Mín. total de pessoas=10|OK|esperado=C1,C4 obtido=C1,C4
+RESULT|RES-122/Mín. homens=5|OK|esperado=C1,C4 obtido=C1,C4
+RESULT|RES-122/Mín. mulheres=3|OK|esperado=C1,C4 obtido=C1,C4
+RESULT|RES-122/Mín. crianças=2|OK|esperado=C1,C4 obtido=C1,C4
+RESULT|RES-122/Mín. idosos=1|OK|esperado=C2,C4 obtido=C2,C4
+RESULT|RES-122/Mín. animais=3|OK|esperado=C2,C4 obtido=C2,C4
+RESULT|RES-123/min-0|OK|mín. total=0: obtido=C1,C2,C4,C5 (C3 e C6 não informaram)
+RESULT|RES-123/mapa-acompanha|OK|marcadores=18 cards=18
+RESULT|EXTRA/filtro-negativo|OBS|mín. total=-1: alerta="Não foi possível carregar os pedidos." cards=18
+RESULT|EXTRA/filtro-decimal|OBS|mín. total=1.5: alerta="Não foi possível carregar os pedidos."
+RESULT|RES-122|ERRO-DO-SCRIPT|locator.click: Error: strict mode violation: getByRole('button', { name: 'Limpar filtros' }) resolved to 2 elements:
+RESULT|RES-109|OK|data asc=C1,C2,C3,C4,C5,C6 desc=C6,C5,C4,C3,C2,C1
+RESULT|RES-124|OK|total asc=C5,C2,C1,C4,C3,C6 desc=C4,C1,C2,C5,C3,C6
+RESULT|RES-124/animais-desc|DIVERGE|animais desc=C4,C2,C5,C1,C3,C6 (C4=5, C2=3, C1=0, C5=0, C3/C6=nulo)
+RESULT|RES-110|OK|status=Cancelado: cards=21 marcadores=21 marcador-C5=true marcador-C1(pendente)=false
+RESULT|EXTRA/estado-vazio|OBS|status=Concluído: lista="Concluído 19/09/2026, 14:20:25 E2E Concluir 1789827625780 ? pessoa(s) Operador r" marcadores=1
+RESULT|RES-111/marcador|OK|largura antes={"C1":"18px","C2":"18px"} sel.C1={"C1":"26px","C2":"18px"} sel.C2={"C1":"18px","C2":"26px"}
+RESULT|RES-111/tooltip|OK|tooltips após C1=["10 pessoa(s) · 19/09/2026, 14:30:53"] após C2=["4 pessoa(s) · 19/09/2026, 14:30:54"]
+RESULT|EXTRA/clicar-no-marcador|OBS|clicar no marcador destaca o card na lista=false
+RESULT|RES-112|DIVERGE|tooltip="2 pessoa(s) · 19/09/2026, 14:20:22" data-do-card="19/09/2026, 14:30:56" (C3 sem total informado deve mostrar "?")
+RESULT|RES-113|OK|1ª carga com pedidos em SP e Lisboa: marcadores=51 fora-da-área-do-mapa=0 lisboa-visível=true
+RESULT|RES-114/atualizar-apos-zoom-manual|OK|posição do marcador C1 antes={"x":370,"y":454} depois de Atualizar={"x":370,"y":454}
+RESULT|RES-114/apos-assumir|OK|posição depois de assumir={"x":370,"y":454}
+RESULT|RES-114/apos-filtro|OK|posição depois de filtrar por status={"x":370,"y":454}
+RESULT|RES-99/navigator.share|OK|share chamado com={"title":"Localização do pedido de resgate","url":"https://www.google.com/maps?q=-23.5505,-46.6333"} snackbar-de-cópia=0
+RESULT|EXTRA/compartilhar-sem-clipboard|OBS|sem navigator.share e sem navigator.clipboard: elementos de feedback na tela=0 erros=[]
+RESULT|EXTRA/compartilhar-clipboard-negado|OBS|clipboard rejeita a cópia: snackbar de sucesso=0 outros-feedbacks=0
+RESULT|C-mobile|OK|375x667: scrollWidth=375 innerWidth=375 mapa=343x184 lista=343x184 erros=[]
+RESULT|C-console|OBS|painel após carga: erros-console=[] http>=400=[]
+FIM charter C

@@ -1,0 +1,75 @@
+
+> frontend@0.0.0 test:e2e
+> npm run test:e2e:reset && npm run test:e2e:run
+
+
+> frontend@0.0.0 test:e2e:reset
+> docker compose -f ../docker-compose.yml exec -T backend php artisan migrate:fresh --seed
+
+
+  Dropping all tables ........................................... 77.17ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table ...................................... 12.32ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000000_create_users_table .......................... 53.70ms DONE
+  0001_01_01_000001_create_cache_table .......................... 35.79ms DONE
+  0001_01_01_000002_create_jobs_table ........................... 53.24ms DONE
+  2026_09_12_020634_create_personal_access_tokens_table ......... 37.55ms DONE
+  2026_09_13_000001_add_role_to_users_table ..................... 35.75ms DONE
+  2026_09_13_000002_create_rescue_requests_table ................ 46.36ms DONE
+  2026_09_13_000003_create_rescue_status_logs_table ............. 96.99ms DONE
+  2026_09_14_000001_add_active_to_users_table ................... 29.84ms DONE
+
+
+   INFO  Seeding database.  
+
+
+> frontend@0.0.0 test:e2e:run
+> docker run --rm --network host --user "$(id -u):$(id -g)" -v "$(pwd):/app" -w /app -e E2E_BASE_URL=http://localhost:5183 -e HOME=/tmp mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
+
+
+Running 29 tests using 6 workers
+
+[1/29] [chromium] › e2e/tests/login.spec.ts:25:3 › Login › acesso ao painel sem sessão redireciona para o login
+[2/29] [chromium] › e2e/tests/login.spec.ts:38:3 › Login › logout pela UI encerra a sessão e redireciona ao login
+[3/29] [chromium] › e2e/tests/operators.spec.ts:6:3 › Gestão de operadores › admin master cadastra um novo operador pela tela
+[4/29] [chromium] › e2e/tests/login.spec.ts:4:3 › Login › login válido redireciona para o painel
+[5/29] [chromium] › e2e/tests/login.spec.ts:14:3 › Login › login inválido mostra mensagem de erro
+[6/29] [chromium] › e2e/tests/login.spec.ts:31:3 › Login › sessão de admin master acessa o painel diretamente
+[7/29] [chromium] › e2e/tests/operators.spec.ts:24:3 › Gestão de operadores › lista de operadores pode ser filtrada por nome e por e-mail
+[8/29] [chromium] › e2e/tests/operators.spec.ts:50:3 › Gestão de operadores › lista de operadores é paginada
+[9/29] [chromium] › e2e/tests/operators.spec.ts:83:3 › Gestão de operadores › admin master desativa e reativa um operador pela tela
+[10/29] [chromium] › e2e/tests/panel-filters-sorting.spec.ts:7:3 › Painel — filtros e ordenação › filtro por status reflete na lista
+[11/29] [chromium] › e2e/tests/panel-filters-sorting.spec.ts:39:3 › Painel — filtros e ordenação › filtro por quantidade mínima reflete na lista
+[12/29] [chromium] › e2e/tests/panel-filters-sorting.spec.ts:58:3 › Painel — filtros e ordenação › ordenação por quantidade reflete na ordem da lista
+[13/29] [chromium] › e2e/tests/panel-navigation.spec.ts:4:3 › Navegação do painel por papel › admin master vê os itens de menu de gestão de operadores e de logs
+[14/29] [chromium] › e2e/tests/panel-navigation.spec.ts:15:3 › Navegação do painel por papel › operador comum não vê os itens de menu de gestão de operadores nem de logs
+[15/29] [chromium] › e2e/tests/panel-navigation.spec.ts:26:3 › Navegação do painel por papel › operador comum é redirecionado ao painel se acessar diretamente a gestão de operadores ou os logs
+[16/29] [chromium] › e2e/tests/panel-status-management.spec.ts:8:3 › Painel — gestão de status do pedido › operador assume um pedido pendente pela UI
+[17/29] [chromium] › e2e/tests/panel-status-management.spec.ts:25:3 › Painel — gestão de status do pedido › operador conclui um pedido em atendimento pela UI
+[18/29] [chromium] › e2e/tests/panel-status-management.spec.ts:46:3 › Painel — gestão de status do pedido › operador cancela um pedido informando o motivo pela UI
+[19/29] [chromium] › e2e/tests/panel-status-management.spec.ts:66:3 › Painel — gestão de status do pedido › compartilhar localização copia a URL para a área de transferência
+[20/29] [chromium] › e2e/tests/panel-status-management.spec.ts:97:3 › Painel — gestão de status do pedido › fluxo completo do painel: operador visualiza, filtra, assume e cancela um pedido
+[21/29] [chromium] › e2e/tests/panel-viewing.spec.ts:5:3 › Painel — visualização de pedidos › mapa e lista exibem os mesmos pedidos simultaneamente (sem alternância por abas)
+[22/29] [chromium] › e2e/tests/panel-viewing.spec.ts:23:3 › Painel — visualização de pedidos › hover em um marcador do mapa mostra a quantidade de pessoas e a data/hora do pedido
+[23/29] [chromium] › e2e/tests/panel-viewing.spec.ts:51:3 › Painel — visualização de pedidos › mapa se ajusta automaticamente aos pedidos apenas na primeira carga
+[24/29] [chromium] › e2e/tests/panel-viewing.spec.ts:95:3 › Painel — visualização de pedidos › clicar em um pedido na lista o destaca; clicar em outro substitui o destaque anterior
+[25/29] [chromium] › e2e/tests/public-request.spec.ts:6:3 › Pedido público de socorro › cidadão registra um pedido de socorro com sucesso
+[26/29] [chromium] › e2e/tests/public-request.spec.ts:24:3 › Pedido público de socorro › exige localização no mapa antes de enviar
+[27/29] [chromium] › e2e/tests/public-request.spec.ts:30:3 › Pedido público de socorro › posiciona o pin automaticamente via geolocalização do navegador, quando permitida
+[28/29] [chromium] › e2e/tests/rescue-status-logs.spec.ts:13:3 › Tela de logs de auditoria › exibe o pedido, o operador e a mudança de status de cada log
+[29/29] [chromium] › e2e/tests/rescue-status-logs.spec.ts:37:3 › Tela de logs de auditoria › lista de logs é paginada
+  29 passed (14.4s)
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.0.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+npm notice To update run: npm install -g npm@12.0.2
+npm notice
+
+real	0m16,686s
+user	0m0,381s
+sys	0m0,074s

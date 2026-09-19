@@ -1,0 +1,22 @@
+RESULT|RES-79/sem sessão|DIVERGE|links=["#","#","https://leafletjs.com","https://www.openstreetmap.org/copyright"] palavras=[] app-bar=0
+RESULT|RES-79/com sessão de operador salva|DIVERGE|links=["#","#","https://leafletjs.com","https://www.openstreetmap.org/copyright"] palavras=[] app-bar=0
+RESULT|RES-80/sem-pin-automatico|OK|pin automático="" botão-desabilitado=true erros=[]
+RESULT|RES-80/marcacao-manual|OK|após clicar no mapa: "Localização selecionada: -23.54560, -46.66666" botão-habilitado=true
+RESULT|RES-80/geolocation-indisponivel|OK|sem navigator.geolocation: pin="" erros=[]
+RESULT|RES-81|OK|inicial="Localização selecionada: -22.90680, -43.17290" | após arrastar="Localização selecionada: -22.91634, -43.15739" | após clicar no mapa="Localização selecionada: -22.88774, -43.22159"
+RESULT|RES-102/confirmacao|OK|texto da tela após envio: "Pedido de socorro Marque no mapa o local onde está a pessoa em situação de risco. Os demais dados são opcionais, mas ajudam as equipes a se prepararem. Pedido e"
+RESULT|RES-102/novo-pedido|OK|campos=["","","","","","","",""] pin="" botão-desabilitado=true
+RESULT|RES-125/card|OBS|card do operador: "Pendente 19/09/2026, 14:27:39 EXPLORATORIO 2026-09-19 B125 1789828059422 7 pessoa(s) · 2 animal(is) Referência: Perto do "mercado" <b>azul</b> & cia ção ñ 🚒 ASSUMIR CANCELAR COMPARTILHAR LOCALIZAÇÃO" | tags <b> renderizadas=0
+RESULT|RES-125/campos-visiveis|DIVERGE|visíveis no card: {"total":true,"animais":true,"referencia":true,"homens":false,"mulheres":false,"criancas":false,"idosos":false}
+RESULT|B-hostil/negativo|OBS|enviado=false mensagem="Não foi possível enviar o pedido. Tente novamente." http=[422 POST /api/rescue-requests]
+RESULT|B-hostil/decimal|OBS|enviado=false mensagem="Não foi possível enviar o pedido. Tente novamente." http=[422 POST /api/rescue-requests]
+RESULT|B-hostil/gigante|OBS|enviado=false mensagem="Não foi possível enviar o pedido. Tente novamente." http=[500 POST /api/rescue-requests]
+RESULT|B-hostil/nome-300|OBS|enviado=false mensagem="Não foi possível enviar o pedido. Tente novamente." http=[422 POST /api/rescue-requests]
+RESULT|B-hostil/referencia-1001|OBS|enviado=false mensagem="Não foi possível enviar o pedido. Tente novamente." http=[422 POST /api/rescue-requests]
+RESULT|B-hostil/nome-espacos|OBS|enviado=true mensagem="Pedido enviado com sucesso. Uma equipe irá avaliar a solicitação." http=[]
+RESULT|B-duplo-clique|OK|3 cliques em "Enviar pedido" com rede lenta -> pedidos criados=1
+RESULT|RES-103/rede-caiu|OK|mensagem="Não foi possível enviar o pedido. Tente novamente." dados-preservados=true reenvio-ok=true pedidos-criados=1
+RESULT|RES-103/erro-500|OK|mensagem="Não foi possível enviar o pedido. Tente novamente." dados-preservados=true reenvio-ok=true pedidos-criados=1
+RESULT|B-mobile|OK|375x667: scrollWidth=375 innerWidth=375 botão-enviar y=1022 (fora da 1ª tela=true) erros-console=[]
+RESULT|B-console|OBS|carga da tela pública: erros-console=[] http>=400=[]
+FIM charter B

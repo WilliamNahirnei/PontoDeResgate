@@ -75,6 +75,8 @@ mais `integrado.md` com a matriz de rastreabilidade e os fluxos cross-module). C
 `docs/test-plans/index.md`. Testes Unit e de endpoint (Feature) do backend testam código e
 **não entram nos planos**. Ao escrever um spec Playwright novo, atualize a linha
 correspondente no mesmo PR (ver convenção documentada em `docs/test-plans/index.md`).
+O histórico de execuções (relatórios e evidências de cada rodada de E2E e exploração) fica em
+`docs/test-runs/`; comece por `docs/test-runs/README.md`.
 
 ## Ferramentas de automação de browser (Claude)
 

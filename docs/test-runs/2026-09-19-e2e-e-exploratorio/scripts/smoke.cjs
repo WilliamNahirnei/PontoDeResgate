@@ -1,0 +1,10 @@
+const L = require('/work/lib.cjs')
+;(async () => {
+  const b = await L.launch()
+  const { page } = await L.newCtx(b)
+  await page.goto(L.BASE + '/')
+  console.log('titulo:', await page.title(), '| h1:', await page.locator('h1').first().innerText())
+  const adm = await L.adminLogin()
+  console.log('admin login status:', adm.status, 'role:', adm.user?.role, 'name:', adm.user?.name)
+  await b.close()
+})().catch((e) => { console.error('ERRO', e); process.exit(1) })
