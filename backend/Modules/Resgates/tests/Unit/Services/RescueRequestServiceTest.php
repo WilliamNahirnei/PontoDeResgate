@@ -2,6 +2,7 @@
 
 namespace Modules\Resgates\Tests\Unit\Services;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Modules\Resgates\Enums\RescueRequestStatus;
@@ -9,8 +10,10 @@ use Modules\Resgates\Models\RescueRequest;
 use Modules\Resgates\Models\RescueStatusLog;
 use Modules\Resgates\Repositories\Contracts\RescueRequestRepositoryInterface;
 use Modules\Resgates\Repositories\Contracts\RescueStatusLogRepositoryInterface;
+use Modules\Resgates\Repositories\RescueRequestRepository;
 use Modules\Resgates\Services\RescueRequestService;
 use Modules\Usuarios\Models\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestDox;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -18,6 +21,17 @@ use Tests\TestCase;
 class RescueRequestServiceTest extends TestCase
 {
     use LazilyRefreshDatabase, MockeryPHPUnitIntegration;
+
+    /**
+     * @return array<string, array{0: RescueRequestStatus}>
+     */
+    public static function finalizedStatuses(): array
+    {
+        return [
+            'concluido' => [RescueRequestStatus::Concluido],
+            'cancelado' => [RescueRequestStatus::Cancelado],
+        ];
+    }
 
     #[TestDox('submit() deve fixar o status como "pendente", ignorando qualquer status informado nos dados.')]
     public function test_submit_forces_the_status_to_pendente_regardless_of_input(): void
@@ -207,5 +221,218 @@ class RescueRequestServiceTest extends TestCase
         $service = new RescueRequestService($rescueRequests, $statusLogs);
 
         $service->cancel($rescueRequest, $operator, 'Solicitante desistiu.');
+    }
+
+    #[TestDox('list() deve repassar filtros, coluna e direção de ordenação ao Repository e devolver a coleção dele.')]
+    public function test_list_delegates_filters_and_sorting_to_the_repository(): void
+    {
+        $collection = new Collection;
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $rescueRequests->shouldReceive('listWithFilters')
+            ->once()
+            ->with(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc')
+            ->andReturn($collection);
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        $result = $service->list(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc');
+
+        $this->assertSame($collection, $result);
+    }
+
+    #[TestDox('assume() deve devolver o pedido recarregado pelo Repository.')]
+    public function test_assume_returns_the_request_reloaded_by_the_repository(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
+        $operator = User::factory()->create();
+        $reloaded = RescueRequest::factory()->emResgate()->make();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $rescueRequests->shouldReceive('updateStatus')->once()->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('freshWithOperator')->once()->with($rescueRequest)->andReturn($reloaded);
+        $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        $result = $service->assume($rescueRequest, $operator);
+
+        $this->assertSame($reloaded, $result);
+    }
+
+    #[DataProvider('finalizedStatuses')]
+    #[TestDox('assume() deve rejeitar um pedido já finalizado (concluído ou cancelado), sem alterar o status no banco.')]
+    public function test_assume_rejects_a_finalized_request(RescueRequestStatus $status): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => $status]);
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        try {
+            $service->assume($rescueRequest, $operator);
+            $this->fail('Esperava que assume() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+            $this->assertSame('Este pedido não está mais pendente.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => $status->value,
+        ]);
+    }
+
+    #[TestDox('complete() deve mudar o status para "concluido" e registrar no log quem concluiu, quando o pedido está "em_resgate".')]
+    public function test_complete_transitions_an_in_progress_request_to_concluido(): void
+    {
+        $assignedOperator = User::factory()->create();
+        $completingOperator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $assignedOperator->id]);
+        $reloaded = RescueRequest::factory()->make(['status' => RescueRequestStatus::Concluido]);
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $rescueRequests->shouldReceive('updateStatus')
+            ->once()
+            ->with($rescueRequest, ['status' => RescueRequestStatus::Concluido])
+            ->andReturn($rescueRequest);
+
+        $rescueRequests->shouldReceive('freshWithOperator')
+            ->once()
+            ->with($rescueRequest)
+            ->andReturn($reloaded);
+
+        $statusLogs->shouldReceive('create')
+            ->once()
+            ->with([
+                'rescue_request_id' => $rescueRequest->id,
+                'operator_id' => $completingOperator->id,
+                'previous_status' => RescueRequestStatus::EmResgate,
+                'new_status' => RescueRequestStatus::Concluido,
+            ])
+            ->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        $result = $service->complete($rescueRequest, $completingOperator);
+
+        $this->assertSame($reloaded, $result);
+    }
+
+    #[DataProvider('finalizedStatuses')]
+    #[TestDox('complete() deve rejeitar um pedido já finalizado (concluído ou cancelado), sem alterar o status no banco.')]
+    public function test_complete_rejects_a_finalized_request(RescueRequestStatus $status): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => $status]);
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        try {
+            $service->complete($rescueRequest, $operator);
+            $this->fail('Esperava que complete() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+            $this->assertSame('Este pedido não está em resgate.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => $status->value,
+        ]);
+    }
+
+    #[TestDox('cancel() deve registrar "em_resgate" como status anterior quando cancela um pedido em andamento.')]
+    public function test_cancel_transitions_an_in_progress_request_and_logs_em_resgate_as_the_previous_status(): void
+    {
+        $rescueRequest = RescueRequest::factory()->emResgate()->create();
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+
+        $rescueRequests->shouldReceive('updateStatus')
+            ->once()
+            ->with($rescueRequest, [
+                'cancellation_reason' => 'Equipe sem acesso ao local.',
+                'status' => RescueRequestStatus::Cancelado,
+            ])
+            ->andReturn($rescueRequest);
+
+        $rescueRequests->shouldReceive('freshWithOperator')
+            ->once()
+            ->andReturn($rescueRequest);
+
+        $statusLogs->shouldReceive('create')
+            ->once()
+            ->with([
+                'rescue_request_id' => $rescueRequest->id,
+                'operator_id' => $operator->id,
+                'previous_status' => RescueRequestStatus::EmResgate,
+                'new_status' => RescueRequestStatus::Cancelado,
+            ])
+            ->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        $service = new RescueRequestService($rescueRequests, $statusLogs);
+
+        $service->cancel($rescueRequest, $operator, 'Equipe sem acesso ao local.');
+    }
+
+    #[TestDox('cancel() deve explicar na mensagem de erro que o pedido já foi finalizado e não pode ser cancelado.')]
+    public function test_cancel_rejection_explains_that_the_request_is_already_finalized(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido]);
+        $operator = User::factory()->create();
+
+        $service = new RescueRequestService(
+            \Mockery::mock(RescueRequestRepositoryInterface::class),
+            \Mockery::mock(RescueStatusLogRepositoryInterface::class),
+        );
+
+        try {
+            $service->cancel($rescueRequest, $operator, 'Solicitante desistiu.');
+            $this->fail('Esperava que cancel() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame('Este pedido já foi finalizado e não pode ser cancelado.', $exception->getMessage());
+        }
+    }
+
+    #[TestDox('A mudança de status deve ser desfeita no banco quando o registro no log de auditoria falha (transação).')]
+    public function test_status_change_is_rolled_back_when_the_audit_log_fails(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
+        $operator = User::factory()->create();
+
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+        $statusLogs->shouldReceive('create')
+            ->once()
+            ->andThrow(new \RuntimeException('Falha ao gravar o log de auditoria.'));
+
+        $service = new RescueRequestService(new RescueRequestRepository, $statusLogs);
+
+        try {
+            $service->assume($rescueRequest, $operator);
+            $this->fail('Esperava que assume() propagasse a falha do log de auditoria.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Falha ao gravar o log de auditoria.', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => RescueRequestStatus::Pendente->value,
+            'operator_id' => null,
+        ]);
     }
 }
