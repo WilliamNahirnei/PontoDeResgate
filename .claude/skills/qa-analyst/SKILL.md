@@ -145,7 +145,7 @@ resposta que o "passa" não foi reverificado.
 
 **A. Requisito ou funcionalidade nova/alterada**
 1. Localize/adicione o requisito em `REQUISITOS.md` (peça ao usuário se ele ainda não
-   existir — não edite sem pedido).
+   existir — não edite sem pedido; para descrevê-lo, use a skill `po-requisitos`).
 2. Projete os cenários (seção acima), escolha camada e arquivo.
 3. Adicione as linhas com status honesto. Requisito novo deve ganhar ao menos uma linha.
 4. Atualize a matriz de rastreabilidade e a visão geral de `integrado.md`.

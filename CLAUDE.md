@@ -64,6 +64,15 @@ docker compose up -d --build
 cd frontend && npm run test:e2e
 ```
 
+## Requisitos (PO)
+
+`REQUISITOS.md` é a fonte de verdade das regras de negócio: os test plans, a implementação
+e os testes partem dele. Para descrever uma funcionalidade nova, alterar uma regra existente
+ou auditar o arquivo atrás de ambiguidades, use a skill `po-requisitos`
+(`.claude/skills/po-requisitos/`): ela conduz a descoberta, propõe o texto e só grava no
+`REQUISITOS.md` depois da aprovação, entregando ao final os critérios de aceite e o impacto
+nos test plans para o `qa-analyst`.
+
 ## Test plans (QA)
 
 Documentos de planejamento/rastreabilidade de **testes funcionais** — o comportamento do
