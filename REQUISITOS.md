@@ -60,7 +60,15 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 ### 4.2 Gestão de status do pedido
 - **Assumir pedido**: altera o status para **"em_resgate"** e registra o operador responsável pelo atendimento.
-- **Concluir pedido**: altera o status para **"concluído"**.
+- **Concluir pedido**: altera o status para **"concluído"**. Ao acionar "Concluir", o operador vê um campo para informar uma observação sobre o resgate antes de confirmar.
+  - A observação é **opcional**: o operador pode confirmar a conclusão sem preenchê-la.
+  - A observação tem no máximo **1000 caracteres**.
+  - Um texto só com espaços em branco é tratado como observação não informada.
+  - O operador pode desistir no diálogo de observação; nesse caso o pedido continua "em_resgate", sem alteração.
+  - Depois de confirmada, a observação faz parte da conclusão e **não pode ser alterada nem incluída depois**: o pedido concluído continua sem nenhuma ação de transição.
+  - A observação é registrada somente ao concluir; assumir e cancelar não têm esse campo (o cancelamento continua exigindo o motivo).
+  - Qualquer operador autenticado ou o admin master vê a observação da conclusão no card do pedido concluído, no painel. Quando não foi informada, o card não exibe nenhuma linha de observação.
+  - A pessoa em situação de risco (tela pública) nunca vê a observação, coerente com §3.3.
 - **Cancelar pedido**: altera o status para **"cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
 - **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
 - **Compartilhar localização**: permite compartilhar a localização do pedido (ex.: para acionar uma equipe de resgate externa).
@@ -91,6 +99,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 ### 4.5 Consulta de logs de operações (admin master)
 - Junto aos itens de navegação para o painel principal e para a lista de operadores, o admin master tem acesso a um menu para a lista de logs (`rescue_status_logs`) das operações realizadas sobre os pedidos de resgate.
 - A lista de logs é paginada.
+- A entrada de log da mudança de status para "concluído" exibe a observação da conclusão, quando informada; as demais entradas de log não exibem observação.
 - Operadores (que não sejam admin master) não têm acesso a essa tela nem ao endpoint correspondente — exclusivo do admin master.
 
 ## 5. Alertas em tempo real (websocket leve)
@@ -101,6 +110,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 ## 6. Fora do escopo do MVP
 
 - Área autenticada para os próprios resgatistas em campo atualizarem o status dos resgates diretamente. Está prevista como evolução futura, não faz parte do MVP.
+- Editar, incluir ou apagar a observação de um pedido depois de concluído; observação nas ações de assumir e cancelar; exibir a observação no hover do mapa. Fora do escopo por decisão do PO: a observação é definida uma única vez, junto com a conclusão, e só é consultada no card e no log.
 
 ## 7. Status de um pedido (`rescue_request`)
 
@@ -122,6 +132,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Ponto de referência textual (opcional).
 - Status (`pendente`, `em_resgate`, `concluido`, `cancelado`).
 - Motivo do cancelamento (obrigatório apenas quando `status = cancelado`).
+- Observação da conclusão (opcional, até 1000 caracteres; só existe quando `status = concluido`).
 - Operador responsável (quando assumido).
 - Soft delete.
 - Timestamps de criação/atualização.

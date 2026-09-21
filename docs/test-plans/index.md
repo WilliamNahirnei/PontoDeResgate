@@ -40,7 +40,7 @@ Uma regra que só se prova chamando um endpoint ou uma classe não é cenário d
   `usuarios.md` e `resgates.md`.
 - IDs são sequenciais e globais dentro de cada arquivo, nunca reciclados — permanecem
   estáveis como referência em PRs e commits mesmo que um cenário seja removido depois.
-  Próximos IDs livres: `USR-81`, `RES-130`, `CRZ-12`.
+  Próximos IDs livres: `USR-81`, `RES-145`, `CRZ-12`.
 - **IDs aposentados:** até 2026-09-18 os planos também listavam testes Unit e Feature. Essas
   linhas foram removidas em 2026-09-19 e seus IDs não são reaproveitados (por isso a
   numeração tem lacunas). O histórico está no commit `dd9807f`.
