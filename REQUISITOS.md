@@ -10,15 +10,22 @@ O sistema **não é específico a um tipo de desastre** e não possui um campo d
 
 O objetivo central é permitir que:
 - Pessoas em situação de risco registrem um pedido de socorro rapidamente, sem barreiras de acesso.
-- Operadores e voluntários visualizem, priorizem e coordenem o atendimento desses pedidos em tempo hábil.
+- Operadores visualizem, priorizem e coordenem o atendimento desses pedidos em tempo hábil.
+- Voluntários, acionados pelos operadores, realizem o resgate no local indicado pela localização do pedido.
 
 ## 2. Papéis de usuário
+
+- **Pessoa em situação de risco**: pessoa que, durante um desastre de grande escala, precisa ser resgatada.
+- **Operador**: pessoa que gerencia a logística do atendimento aos pedidos de socorro — acompanha, prioriza e assume pedidos, e repassa a localização aos voluntários que vão ao resgate.
+- **Voluntário**: pessoa não autenticada que vai fisicamente ao resgate das pessoas em situação de risco, a partir da localização repassada pelo operador. Não acessa nenhuma tela do sistema.
+- **Admin master**: usuário responsável por administrar o sistema — gerencia operadores e consulta o log de operações —, além de ter acesso a tudo que o operador acessa. Por concentrar a administração do sistema, tende a ser o papel apto a usar qualquer funcionalidade nova que vier a ser implementada.
 
 | Papel | Autenticação | Acesso |
 |---|---|---|
 | Pessoa em situação de risco | Sem login | Somente a tela pública de solicitação de socorro |
-| Operador / voluntário | Login com Bearer token (Laravel Sanctum) | Painel de coordenação (mapa, lista, gestão de status dos pedidos) |
-| Admin master | Login com Bearer token (Laravel Sanctum) | Cadastro de operadores, além do acesso do operador |
+| Operador | Login com Bearer token (Laravel Sanctum) | Painel de coordenação (mapa, lista, gestão de status dos pedidos) |
+| Voluntário | Sem login | Nenhum — recebe a localização repassada pelo operador (ação "Compartilhar localização", §4.2), fora do sistema |
+| Admin master | Login com Bearer token (Laravel Sanctum) | Cadastro, listagem e desativação/reativação de operadores; consulta ao log de operações; além do acesso do operador |
 
 ## 3. Tela pública (sem autenticação)
 
@@ -71,7 +78,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - A pessoa em situação de risco (tela pública) nunca vê a observação, coerente com §3.3.
 - **Cancelar pedido**: altera o status para **"cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
 - **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
-- **Compartilhar localização**: permite compartilhar a localização do pedido (ex.: para acionar uma equipe de resgate externa).
+- **Compartilhar localização**: permite compartilhar a localização do pedido com um voluntário, para que ele vá ao local.
 
 ### 4.3 Regras de negócio
 - Todo `rescue_request` utiliza **soft delete** — nunca é removido fisicamente do banco de dados.
@@ -83,7 +90,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Data/hora da mudança.
 
 ### 4.4 Cadastro e gestão de operadores (admin master)
-- O admin master é responsável por cadastrar novos operadores/voluntários no sistema.
+- O admin master é responsável por cadastrar novos operadores no sistema.
 - A tela do admin master possui um ponto de navegação para a lista de operadores.
 - **Lista de operadores**:
   - Exibe os dados dos operadores cadastrados.
