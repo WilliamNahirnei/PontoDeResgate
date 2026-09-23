@@ -70,4 +70,23 @@ class RescueStatusLogResourceTest extends TestCase
         $this->assertNull($data['rescue_request']['requester_name']);
         $this->assertNull($data['rescue_request']['reference_point']);
     }
+
+    #[TestDox('A resposta deve continuar expondo os dados do pedido mesmo quando ele foi excluído (soft delete).')]
+    public function test_it_exposes_the_request_summary_even_when_the_request_is_soft_deleted(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create([
+            'requester_name' => 'Ana Beatriz',
+            'reference_point' => 'Casa azul, próximo à ponte.',
+        ]);
+        $log = RescueStatusLog::factory()->create(['rescue_request_id' => $rescueRequest->id]);
+        $rescueRequest->delete();
+
+        $data = (new RescueStatusLogResource($log->fresh()->load(['rescueRequest', 'operator'])))->response()->getData(true)['data'];
+
+        $this->assertSame([
+            'id' => $rescueRequest->id,
+            'requester_name' => 'Ana Beatriz',
+            'reference_point' => 'Casa azul, próximo à ponte.',
+        ], $data['rescue_request']);
+    }
 }

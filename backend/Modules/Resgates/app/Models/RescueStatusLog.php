@@ -44,7 +44,7 @@ class RescueStatusLog extends Model
      */
     public function rescueRequest(): BelongsTo
     {
-        return $this->belongsTo(RescueRequest::class);
+        return $this->belongsTo(RescueRequest::class)->withTrashed();
     }
 
     /**

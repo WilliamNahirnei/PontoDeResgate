@@ -151,6 +151,20 @@ class RescueStatusLogRepositoryTest extends TestCase
         $this->assertTrue($log->operator->is($operator));
     }
 
+    #[TestDox('paginateWithRelations() deve manter o pedido excluído (soft delete) carregado na relação rescueRequest do log.')]
+    public function test_paginate_with_relations_keeps_the_soft_deleted_request_loaded_in_the_relation(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create();
+        RescueStatusLog::factory()->create(['rescue_request_id' => $rescueRequest->id]);
+        $rescueRequest->delete();
+
+        $result = $this->repository->paginateWithRelations(15);
+        $log = $result->first();
+
+        $this->assertTrue($log->relationLoaded('rescueRequest'));
+        $this->assertTrue($log->rescueRequest->is($rescueRequest));
+    }
+
     #[TestDox('paginateWithRelations() deve devolver todos os logs em uma única página quando a quantidade por página é maior que o total.')]
     public function test_paginate_with_relations_returns_everything_when_per_page_exceeds_the_total(): void
     {

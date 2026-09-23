@@ -37,6 +37,16 @@ class RescueStatusLogTest extends TestCase
         $this->assertTrue($log->rescueRequest->is($rescueRequest));
     }
 
+    #[TestDox('rescueRequest deve continuar devolvendo o pedido mesmo quando ele foi excluído (soft delete).')]
+    public function test_rescue_request_returns_the_request_even_when_it_is_soft_deleted(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create();
+        $log = RescueStatusLog::factory()->create(['rescue_request_id' => $rescueRequest->id]);
+        $rescueRequest->delete();
+
+        $this->assertTrue($log->fresh()->rescueRequest->is($rescueRequest));
+    }
+
     #[TestDox('operator deve devolver o operador que executou a mudança de status.')]
     public function test_operator_returns_the_user_who_performed_the_change(): void
     {
