@@ -40,10 +40,12 @@ Uma regra que só se prova chamando um endpoint ou uma classe não é cenário d
   `usuarios.md` e `resgates.md`.
 - IDs são sequenciais e globais dentro de cada arquivo, nunca reciclados — permanecem
   estáveis como referência em PRs e commits mesmo que um cenário seja removido depois.
-  Próximos IDs livres: `USR-81`, `RES-145`, `CRZ-12`.
+  Próximos IDs livres: `USR-81`, `RES-159`, `CRZ-12`.
 - **IDs aposentados:** até 2026-09-18 os planos também listavam testes Unit e Feature. Essas
   linhas foram removidas em 2026-09-19 e seus IDs não são reaproveitados (por isso a
-  numeração tem lacunas). O histórico está no commit `dd9807f`.
+  numeração tem lacunas). O histórico está no commit `dd9807f`. `RES-119` (tela de logs com
+  pedido apagado por soft delete) foi aposentado em 2026-09-23: `REQUISITOS.md` §7 passou a
+  dizer que nenhum pedido é excluído do sistema.
 - Cenários que atravessam Usuarios e Resgates (a checagem em si mistura os dois domínios,
   não apenas usa autenticação como pré-condição incidental) não aparecem nos arquivos de
   módulo — vivem só em `integrado.md`, prefixo `CRZ-xx`.
