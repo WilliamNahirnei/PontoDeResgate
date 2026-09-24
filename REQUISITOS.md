@@ -58,12 +58,25 @@ A tela pública deve conter **somente** informações relacionadas a solicitar u
 Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 ### 4.1 Visualização de pedidos
-- **Mapa**: exibe os pedidos georreferenciados; ao passar o mouse (hover) sobre um pedido, mostra a quantidade de pessoas e a data/hora do pedido.
-- Ao carregar os pedidos, o mapa se ajusta automaticamente para enquadrar todos eles (não fica centralizado num local fixo/padrão) — a implantação do sistema pode ser em qualquer cidade, então o mapa não pode presumir uma região. Esse enquadramento automático acontece apenas na primeira carga dos pedidos; atualizações e mudanças de status seguintes não reposicionam o mapa, para não atrapalhar o operador.
-- **Lista**: visualização alternativa ao mapa, em formato de lista de pedidos.
-- Ao clicar em um pedido na lista, ele fica em destaque no mapa e informações sobre ele aparecem. Ao clicar em outro pedido, as informações do pedido clicado anteriormente no mapa não são mais mostradas — somente as do novo pedido clicado.
-- **Filtros**: os pedidos exibidos (mapa e lista) podem ser filtrados por status. Também é possível filtrar por quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais —, considerando apenas os pedidos que tiverem essa informação preenchida (campos opcionais no formulário público).
-- **Ordenação**: a lista de pedidos pode ser ordenada, de forma crescente ou decrescente, pela data/hora do pedido ou pelas quantidades de pessoas (total, homens, mulheres, crianças, idosos, animais).
+- O painel exibe o **mapa** e a **lista** de pedidos ao mesmo tempo, sempre com os mesmos pedidos (respeitando os filtros aplicados).
+- **Mapa**: exibe os pedidos georreferenciados; ao passar o mouse (hover) sobre um pedido, mostra a quantidade total de pessoas e a data/hora do pedido. Quando a quantidade total não foi informada, o hover indica que ela não foi informada.
+- Ao carregar os pedidos, o mapa se ajusta automaticamente para enquadrar todos eles (não fica centralizado num local fixo/padrão) — a implantação do sistema pode ser em qualquer cidade, então o mapa não pode presumir uma região. Esse enquadramento automático acontece apenas na primeira carga dos pedidos; atualizações, mudanças de status e mudanças de filtro seguintes não reposicionam o mapa, para não atrapalhar o operador.
+- Quando não há nenhum pedido na primeira carga, o painel informa que não há pedidos a exibir.
+- **Lista**: exibe os pedidos em formato de lista.
+- Ao clicar em um pedido na lista, ele fica em destaque no mapa e mostra as mesmas informações do hover (quantidade total de pessoas e data/hora do pedido), que permanecem visíveis até outro pedido ser clicado.
+- Ao clicar em um marcador no mapa, o pedido fica selecionado da mesma forma: o marcador fica em destaque com as mesmas informações do hover, e o card do pedido fica em destaque na lista.
+- Quando o pedido é selecionado pelo mapa e o card dele não está visível na lista, a lista rola até o card.
+- Ao clicar em outro pedido, na lista ou no mapa, o destaque e as informações do pedido clicado anteriormente deixam de ser mostrados — somente os do novo pedido clicado.
+- **Filtros**: os pedidos exibidos no mapa e na lista podem ser filtrados por:
+  - Status: um status por vez ou todos. Ao abrir o painel, todos os status são exibidos.
+  - Quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais.
+  - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima e a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo.
+- Com um filtro de quantidade mínima aplicado, só aparecem os pedidos em que essa quantidade foi informada e é igual ou maior que o mínimo; os pedidos em que ela não foi informada (campos opcionais no formulário público) não aparecem no mapa nem na lista.
+- Os filtros aplicados ao mesmo tempo valem em conjunto: o pedido só aparece se atender a todos.
+- **Ordenação**: a lista pode ser ordenada pela data/hora do pedido ou por uma das quantidades (total, homens, mulheres, crianças, idosos, animais), em ordem crescente ou decrescente.
+- Ao abrir o painel, a lista vem ordenada pela data/hora do pedido, do mais recente para o mais antigo.
+- Ao ordenar por uma quantidade, os pedidos em que ela não foi informada ficam sempre no fim da lista, tanto na ordem crescente quanto na decrescente.
+- A ordenação altera apenas a lista; o mapa não muda.
 
 ### 4.2 Gestão de status do pedido
 - **Assumir pedido**: altera o status para **"em_resgate"** e registra o operador responsável pelo atendimento.
