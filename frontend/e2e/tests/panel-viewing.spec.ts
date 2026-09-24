@@ -48,7 +48,7 @@ test.describe('Painel — visualização de pedidos', () => {
     await expect(page.locator('.leaflet-tooltip')).toContainText('7 pessoa(s)')
   })
 
-  test('mapa se ajusta automaticamente aos pedidos apenas na primeira carga', async ({
+  test('atualizar a lista pelo botão "Atualizar" não reposiciona o mapa', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -68,28 +68,42 @@ test.describe('Painel — visualização de pedidos', () => {
 
     await page.goto('/painel')
 
-    const markerA = page.getByTestId(`rescue-request-marker-${requestA.id}`)
-    await expect(markerA).toBeVisible()
+    const marker = page.getByTestId(`rescue-request-marker-${requestA.id}`)
+    await expect(marker).toBeVisible()
 
-    // boundingBox() não espera nada — se cair bem no instante em que
-    // rebuildMarkers() removeu o marcador antigo e ainda não recriou o novo,
-    // volta null. Envolve em expect(...).toPass() para tolerar esse instante.
-    let boundsBeforeUpdate = null
-    await expect(async () => {
-      boundsBeforeUpdate = await page.getByTestId(`rescue-request-marker-${requestA.id}`).boundingBox()
-      expect(boundsBeforeUpdate).not.toBeNull()
-    }).toPass()
+    // O enquadramento da primeira carga é animado: medir durante a animação
+    // dá uma posição que ainda vai mudar. Espera duas leituras seguidas iguais.
+    async function stablePosition() {
+      let previous = null
+      let current = null
+      await expect
+        .poll(async () => {
+          previous = current
+          current = await marker.boundingBox()
+          return (
+            previous !== null &&
+            current !== null &&
+            Math.abs(current.x - previous.x) < 0.5 &&
+            Math.abs(current.y - previous.y) < 0.5
+          )
+        })
+        .toBe(true)
+      return current
+    }
 
+    const positionBefore = await stablePosition()
+
+    const refreshed = page.waitForResponse(
+      (response) => response.url().includes('/api/rescue-requests') && response.request().method() === 'GET',
+    )
     await page.getByRole('button', { name: 'Atualizar' }).click()
+    await refreshed
+    await expect(marker).toBeVisible()
 
-    let boundsAfterUpdate = null
-    await expect(async () => {
-      boundsAfterUpdate = await page.getByTestId(`rescue-request-marker-${requestA.id}`).boundingBox()
-      expect(boundsAfterUpdate).not.toBeNull()
-    }).toPass()
+    const positionAfter = await stablePosition()
 
-    expect(boundsAfterUpdate.x).toBeCloseTo(boundsBeforeUpdate.x, 0)
-    expect(boundsAfterUpdate.y).toBeCloseTo(boundsBeforeUpdate.y, 0)
+    expect(positionAfter.x).toBeCloseTo(positionBefore.x, 0)
+    expect(positionAfter.y).toBeCloseTo(positionBefore.y, 0)
   })
 
   test('clicar em um pedido na lista o destaca; clicar em outro substitui o destaque anterior', async ({

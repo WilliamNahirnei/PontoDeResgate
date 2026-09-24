@@ -40,7 +40,7 @@
 | ID | Fluxo | Camada | Cenário | Status | Teste automatizado | Observação |
 |---|---|---|---|---|---|---|
 | CRZ-03 | Painel completo | E2E | Login como operador → visualizar, filtrar, assumir e cancelar um pedido, ponta a ponta | Implementado | `frontend/e2e/tests/panel-status-management.spec.ts` ("fluxo completo do painel: operador visualiza, filtra, assume e cancela um pedido") |  |
-| CRZ-04 | Navegação por papel | E2E | Admin master vê os itens de menu de gestão de operadores e de logs; operador comum não vê nenhum dos dois | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("admin master vê os itens de menu de gestão de operadores e de logs", "operador comum não vê os itens de menu de gestão de operadores nem de logs") |  |
+| CRZ-04 | Navegação por papel | E2E | Admin master vê os itens de menu de gestão de operadores e de logs; operador comum não vê nenhum dos dois | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("admin master vê os itens de menu de gestão de operadores e de logs", "operador comum não vê os itens de menu de gestão de operadores nem de logs") | A metade negativa foi reescrita em 2026-09-24 (ver USR-57). |
 | CRZ-05 | Alertas em tempo real | — | Operadores conectados recebem um alerta via websocket quando um novo pedido é criado (`REQUISITOS.md` §5) | Não implementado | — | Nenhum código (`websocket`/`broadcast`/`pusher`/`reverb`) nem teste correspondente foi localizado em backend ou frontend. Precisa de uma investigação/confirmação de escopo antes de qualquer teste ser planejado para este item. Reverificado em 2026-09-18 com a mesma busca (`websocket`/`broadcast`/`pusher`/`reverb`/`echo`) em `backend/app`, `backend/Modules`, `backend/routes`, `backend/config` e `frontend/src`: o único resultado é `backend/config/modules.php` (caminho do gerador de canais do `nwidart/laravel-modules`), falso positivo. |
 | CRZ-06 | Navegação por papel | E2E | Operador comum que acessa diretamente a URL de gestão de operadores ou de logs é redirecionado ao painel | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("operador comum é redirecionado ao painel se acessar diretamente a gestão de operadores ou os logs") | Guarda de rota do frontend (`requiresAdminMaster` em `frontend/src/router/index.js`); o teste já existia, mas nenhum cenário o descrevia (CRZ-04 só fala de menu). |
 | CRZ-10 | Auditoria (operador × log) | E2E | Depois de um operador assumir, concluir ou cancelar pedidos pela UI, o admin master vê na tela de logs uma entrada para cada mudança, com o operador que agiu e a transição de status correta | Não coberto | — | `REQUISITOS.md` §4.3. RES-69 cria a mudança por API e só confere pedido e status; o operador não é conferido e o caminho ação pela UI → log não é exercitado. Exige duas sessões (operador e admin master). Quando a observação ao concluir existir (RES-130), o passo "concluir pela UI" passa pelo diálogo; a observação em si é conferida em RES-142 a RES-144, não aqui. |
@@ -60,5 +60,8 @@
 > última vez — não é gerada automaticamente. Ao editar qualquer cenário em `usuarios.md`
 > ou `resgates.md` que mude de status, atualize também esta contagem (ver convenção de
 > manutenção em [`index.md`](./index.md)). "Implementado" significa que existe spec
-> Playwright; a última execução completa da suíte E2E **não foi refeita** nas revisões de
-> 2026-09-19 e 2026-09-23.
+> Playwright e foi visto passando. Em 2026-09-24 cada cenário `Implementado` foi executado
+> isoladamente, com o banco recriado do zero (`migrate:fresh --seed`) antes de cada um, e
+> conferido contra a linha do plano; os que falharam ou não provavam o cenário tiveram o
+> teste apagado e voltaram a `Planejado` (USR-21, USR-55, USR-57, RES-40, CRZ-04); no mesmo dia
+> os cinco foram reescritos e voltaram a `Implementado`.

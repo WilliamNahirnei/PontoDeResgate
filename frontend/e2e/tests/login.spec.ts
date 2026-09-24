@@ -28,11 +28,17 @@ test.describe('Login', () => {
     await expect(page).toHaveURL(/\/login$/)
   })
 
-  test('sessão de admin master acessa o painel diretamente', async ({ page, loginAsAdminMaster }) => {
+  test('sessão de admin master abre o painel direto, sem passar pela tela de login', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
     await loginAsAdminMaster()
     await page.goto('/painel')
 
-    await expect(page).not.toHaveURL(/\/login$/)
+    // Afirma algo que só o painel mostra: checar apenas que a URL não é /login
+    // passa antes de a guarda de rota ter a chance de redirecionar.
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(page).toHaveURL(/\/painel$/)
   })
 
   test('logout pela UI encerra a sessão e redireciona ao login', async ({ page, loginAsAdminMaster }) => {

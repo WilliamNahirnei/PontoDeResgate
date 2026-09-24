@@ -21,7 +21,7 @@ test.describe('Gestão de operadores', () => {
     await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText(email)
   })
 
-  test('lista de operadores pode ser filtrada por nome e por e-mail', async ({
+  test('filtros por nome e por e-mail mostram só o operador correspondente', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -29,22 +29,39 @@ test.describe('Gestão de operadores', () => {
     const adminToken = await loginAsAdminMaster()
 
     const unique = Date.now()
-    const name = `Operador Filtro ${unique}`
-    const email = `e2e.filtro.${unique}@pontoderesgate.local`
+    const namePrefix = `Operador Filtro ${unique}`
+    const operatorA = { name: `${namePrefix} A`, email: `e2e.filtro.${unique}.a@pontoderesgate.local` }
+    const operatorB = { name: `${namePrefix} B`, email: `e2e.filtro.${unique}.b@pontoderesgate.local` }
 
-    await request.post(`${API_BASE_URL}/api/operators`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-      data: { name, email, password: 'senha-e2e-123' },
-    })
+    for (const operator of [operatorA, operatorB]) {
+      await request.post(`${API_BASE_URL}/api/operators`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        data: { ...operator, password: 'senha-e2e-123' },
+      })
+    }
 
     await page.goto('/painel/operadores')
 
-    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill(name)
-    await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText(email)
+    const nameFilter = page.getByRole('textbox', { name: 'Filtrar por nome' })
+    const rowA = page.getByRole('row', { name: new RegExp(operatorA.name) })
+    const rowB = page.getByRole('row', { name: new RegExp(operatorB.name) })
 
-    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill('')
-    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill(email)
-    await expect(page.getByRole('row', { name: new RegExp(name) })).toContainText(email)
+    // Parte de um recorte em que os dois aparecem (a lista é paginada e o
+    // banco acumula operadores de outras execuções): sem isso, o "some da
+    // lista" abaixo passaria mesmo com o filtro quebrado.
+    await nameFilter.fill(namePrefix)
+    await expect(rowA).toBeVisible()
+    await expect(rowB).toBeVisible()
+
+    await nameFilter.fill(operatorA.name)
+    await expect(rowB).toHaveCount(0)
+    await expect(rowA).toContainText(operatorA.email)
+
+    await nameFilter.fill(namePrefix)
+    await expect(rowB).toBeVisible()
+    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill(operatorB.email)
+    await expect(rowA).toHaveCount(0)
+    await expect(rowB).toContainText(operatorB.email)
   })
 
   test('lista de operadores é paginada', async ({ page, request, loginAsAdminMaster }) => {

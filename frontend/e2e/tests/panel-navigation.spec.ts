@@ -19,6 +19,10 @@ test.describe('Navegação do painel por papel', () => {
     await loginAsNewOperator()
     await page.goto('/painel')
 
+    // Espera a barra de navegação estar desenhada: sem isso, o toHaveCount(0)
+    // abaixo passa antes de os itens aparecerem, até para o admin master.
+    await expect(page.getByRole('link', { name: 'Painel' })).toBeVisible()
+
     await expect(page.getByRole('link', { name: 'Operadores' })).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Logs' })).toHaveCount(0)
   })
