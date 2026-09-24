@@ -46,7 +46,7 @@ A tela pública deve conter **somente** informações relacionadas a solicitar u
 - Ponto de referência textual, complementar à localização marcada no mapa.
 
 ### 3.3 Regras de negócio
-- Ao ser enviado, o pedido é persistido como um registro de `rescue_request` com status inicial **"pendente"**.
+- Ao ser enviado, o pedido é persistido como um registro de `rescue_request` com status inicial **"Pendente"**.
 - A localização (coordenadas do mapa) é obrigatória; os demais campos do formulário são opcionais.
 - A pessoa solicitante **não tem acesso a nenhum identificador ou meio de consulta** do pedido após o envio:
   - Não pode editar o pedido já enviado.
@@ -79,30 +79,37 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - A ordenação altera apenas a lista; o mapa não muda.
 
 ### 4.2 Gestão de status do pedido
-- **Assumir pedido**: altera o status para **"em_resgate"** e registra o operador responsável pelo atendimento.
-- **Concluir pedido**: altera o status para **"concluído"**. Ao acionar "Concluir", o operador vê um campo para informar uma observação sobre o resgate antes de confirmar.
+- **Assumir pedido**: altera o status para **"Em resgate"** e registra o operador responsável pelo atendimento.
+- **Concluir pedido**: altera o status para **"Concluído"**. Ao acionar "Concluir", o operador vê um campo para informar uma observação sobre o resgate antes de confirmar.
   - A observação é **opcional**: o operador pode confirmar a conclusão sem preenchê-la.
   - A observação tem no máximo **1000 caracteres**.
   - Um texto só com espaços em branco é tratado como observação não informada.
-  - O operador pode desistir no diálogo de observação; nesse caso o pedido continua "em_resgate", sem alteração.
+  - O operador pode desistir no diálogo de observação; nesse caso o pedido continua "Em resgate", sem alteração.
   - Depois de confirmada, a observação faz parte da conclusão e **não pode ser alterada nem incluída depois**: o pedido concluído continua sem nenhuma ação de transição.
   - A observação é registrada somente ao concluir; assumir e cancelar não têm esse campo (o cancelamento continua exigindo o motivo).
   - Qualquer operador autenticado ou o admin master vê a observação da conclusão no card do pedido concluído, no painel. Quando não foi informada, o card não exibe nenhuma linha de observação.
   - A pessoa em situação de risco (tela pública) nunca vê a observação, coerente com §3.3.
-- **Cancelar pedido**: altera o status para **"cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
+- **Cancelar pedido**: altera o status para **"Cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
 - **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
 - **Compartilhar localização**: permite compartilhar a localização do pedido com um voluntário, para que ele vá ao local.
 
-### 4.3 Regras de negócio
-- Todo `rescue_request` utiliza **soft delete** — nunca é removido fisicamente do banco de dados.
-- Toda mudança de status gera um registro de auditoria em `rescue_status_logs`, contendo:
-  - Pedido relacionado (`rescue_request`).
-  - Operador responsável pela mudança.
+### 4.3 Log de operações
+- Toda ação de um operador ou do admin master que altera o status de um pedido — assumir, concluir e cancelar — gera uma entrada no log de operações.
+- "Compartilhar localização" não altera o pedido e não gera entrada no log.
+- Cada entrada do log contém:
+  - Pedido relacionado.
+  - Operador (ou admin master) que realizou a ação.
   - Status anterior.
   - Novo status.
-  - Data/hora da mudança.
+  - Data/hora da ação.
 
-### 4.4 Cadastro e gestão de operadores (admin master)
+### 4.4 Consulta de logs de operações (admin master)
+- Junto aos itens de navegação para o painel principal e para a lista de operadores, o admin master tem acesso a um menu para a lista de logs (`rescue_status_logs`) das operações realizadas sobre os pedidos de resgate.
+- A lista de logs é paginada.
+- A entrada de log da mudança de status para "Concluído" exibe a observação da conclusão, quando informada; as demais entradas de log não exibem observação.
+- Operadores (que não sejam admin master) não têm acesso a essa tela nem ao endpoint correspondente — exclusivo do admin master.
+
+### 4.5 Cadastro e gestão de operadores (admin master)
 - O admin master é responsável por cadastrar novos operadores no sistema.
 - A tela do admin master possui um ponto de navegação para a lista de operadores.
 - **Lista de operadores**:
@@ -115,12 +122,6 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Possui um botão que direciona para o cadastro de um novo operador.
 - Um operador desativado não consegue autenticar-se no sistema.
 - Operadores (que não sejam admin master) não têm acesso à lista de operadores nem ao cadastro de novos operadores — essas telas e os respectivos endpoints são exclusivos do admin master.
-
-### 4.5 Consulta de logs de operações (admin master)
-- Junto aos itens de navegação para o painel principal e para a lista de operadores, o admin master tem acesso a um menu para a lista de logs (`rescue_status_logs`) das operações realizadas sobre os pedidos de resgate.
-- A lista de logs é paginada.
-- A entrada de log da mudança de status para "concluído" exibe a observação da conclusão, quando informada; as demais entradas de log não exibem observação.
-- Operadores (que não sejam admin master) não têm acesso a essa tela nem ao endpoint correspondente — exclusivo do admin master.
 
 ## 5. Alertas em tempo real (websocket leve)
 
@@ -136,10 +137,12 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 | Status | Descrição |
 |---|---|
-| `pendente` | Estado inicial, ao ser criado pela pessoa em situação de risco |
-| `em_resgate` | Um operador assumiu o pedido e está em atendimento |
-| `concluido` | O resgate foi concluído |
-| `cancelado` | O pedido foi cancelado (motivo obrigatório) |
+| Pendente | Estado inicial, ao ser criado pela pessoa em situação de risco |
+| Em resgate | Um operador assumiu o pedido e está em atendimento |
+| Concluído | O resgate foi concluído |
+| Cancelado | O pedido foi cancelado (motivo obrigatório) |
+
+- Nenhum pedido é excluído do sistema, nem pelo painel nem de outra forma. Em todo o ciclo de vida, o pedido só passa pelas transições de status acima; pedidos concluídos ou cancelados continuam no sistema.
 
 ## 8. Entidades principais
 
@@ -150,11 +153,10 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Quantidade de homens/mulheres/crianças/idosos (opcional).
 - Quantidade de animais (opcional).
 - Ponto de referência textual (opcional).
-- Status (`pendente`, `em_resgate`, `concluido`, `cancelado`).
-- Motivo do cancelamento (obrigatório apenas quando `status = cancelado`).
-- Observação da conclusão (opcional, até 1000 caracteres; só existe quando `status = concluido`).
+- Status (Pendente, Em resgate, Concluído, Cancelado).
+- Motivo do cancelamento (obrigatório apenas quando o status é Cancelado).
+- Observação da conclusão (opcional, até 1000 caracteres; só existe quando o status é Concluído).
 - Operador responsável (quando assumido).
-- Soft delete.
 - Timestamps de criação/atualização.
 
 ### `rescue_status_logs`
