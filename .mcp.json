@@ -26,7 +26,7 @@
                 "/tmp/.X11-unix:/tmp/.X11-unix:ro",
                 "mcr.microsoft.com/playwright:v1.63.0-noble",
                 "npx",
-                "@playwright/mcp@latest",
+                "@playwright/mcp@0.0.80",
                 "--browser",
                 "chromium",
                 "--viewport-size",
