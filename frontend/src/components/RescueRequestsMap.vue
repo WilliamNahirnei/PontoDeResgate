@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '@/utils/leafletIcons'
+import { formatTotalPeople } from '@/utils/rescueRequestFormat'
 
 const props = defineProps({
   rescueRequests: {
@@ -57,7 +58,7 @@ function rebuildMarkers() {
     })
 
     marker.bindTooltip(
-      `${rescueRequest.total_people ?? '?'} pessoa(s) · ${formatDateTime(rescueRequest.created_at)}`,
+      `${formatTotalPeople(rescueRequest.total_people)} · ${formatDateTime(rescueRequest.created_at)}`,
     )
 
     marker.on('click', () => emit('select', rescueRequest.id))

@@ -274,6 +274,77 @@ test.describe('Painel — visualização de pedidos', () => {
     await expect(tooltip).toContainText(/não informad/i)
   })
 
+  test('card de pedido sem quantidade total informada indica que ela não foi informada, com o mesmo texto do hover', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, {
+      requester_name: `E2E Card Sem Total ${Date.now()}`,
+      ...randomCoordinates(),
+    })
+
+    await page.goto('/painel')
+
+    const marker = page.getByTestId(`rescue-request-marker-${rescueRequest.id}`)
+    await expect(marker).toBeVisible()
+    await marker.dispatchEvent('mouseover')
+    const tooltip = page.locator(TOOLTIP, { hasText: await formatDateTime(page, rescueRequest.created_at) })
+    await expect(tooltip).toContainText(/não informad/i)
+    // O tooltip é "<quantidade> · <data/hora>": a parte da quantidade é o que o
+    // card precisa repetir.
+    const hoverPeopleText = (await tooltip.textContent()).split(' · ')[0].trim()
+
+    const card = page.locator('.rescue-requests-list .v-card', { hasText: rescueRequest.requester_name })
+    await expect(card).toContainText(hoverPeopleText)
+    await expect(card).not.toContainText('?')
+  })
+
+  test('card mostra só as categorias de pessoas informadas; as não informadas não aparecem', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, {
+      requester_name: `E2E Card Categorias Parciais ${Date.now()}`,
+      total_people: 3,
+      men_count: 1,
+      children_count: 2,
+    })
+
+    await page.goto('/painel')
+
+    const card = page.locator('.rescue-requests-list .v-card', { hasText: rescueRequest.requester_name })
+    await expect(card).toContainText(/homens?\D{0,3}1\b|\b1\D{0,3}homens?/i)
+    await expect(card).toContainText(/crianças?\D{0,3}2\b|\b2\D{0,3}crianças?/i)
+    await expect(card).not.toContainText(/mulher/i)
+    await expect(card).not.toContainText(/idos/i)
+    await expect(card).not.toContainText('?')
+  })
+
+  test('categoria informada como zero aparece no card com o valor zero, diferente de uma não informada', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, {
+      requester_name: `E2E Card Categoria Zero ${Date.now()}`,
+      total_people: 2,
+      men_count: 0,
+      women_count: 2,
+    })
+
+    await page.goto('/painel')
+
+    const card = page.locator('.rescue-requests-list .v-card', { hasText: rescueRequest.requester_name })
+    await expect(card).toContainText(/homens?\D{0,3}0\b|\b0\D{0,3}homens?/i)
+    await expect(card).toContainText(/mulheres?\D{0,3}2\b|\b2\D{0,3}mulheres?/i)
+    await expect(card).not.toContainText(/idos/i)
+  })
+
   test('quando não há nenhum pedido na primeira carga, o painel informa que não há pedidos a exibir', async ({
     page,
     loginAsAdminMaster,

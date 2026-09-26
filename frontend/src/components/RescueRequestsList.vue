@@ -1,4 +1,6 @@
 <script setup>
+import { formatTotalPeople } from '@/utils/rescueRequestFormat'
+
 defineProps({
   rescueRequests: {
     type: Array,
@@ -64,7 +66,7 @@ function peopleComposition(rescueRequest) {
 
       <div class="text-subtitle-2">{{ rescueRequest.requester_name || 'Pedido sem nome informado' }}</div>
       <div class="text-body-2 text-medium-emphasis">
-        {{ rescueRequest.total_people ?? '?' }} pessoa(s)
+        {{ formatTotalPeople(rescueRequest.total_people) }}
         <span v-if="rescueRequest.animals_count">· {{ rescueRequest.animals_count }} animal(is)</span>
       </div>
       <div v-if="peopleComposition(rescueRequest)" class="text-body-2 text-medium-emphasis">
