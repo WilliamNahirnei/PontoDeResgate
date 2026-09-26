@@ -162,6 +162,19 @@ class RescueRequestRepositoryTest extends TestCase
         $this->assertTrue($fresh->operator->is($operator));
     }
 
+    #[TestDox('findForUpdate() deve reler o pedido do banco, devolvendo o status atual mesmo que o modelo recebido esteja desatualizado.')]
+    public function test_find_for_update_returns_the_current_database_state(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
+        RescueRequest::query()->whereKey($rescueRequest->id)->update(['status' => RescueRequestStatus::EmResgate]);
+
+        $locked = $this->repository->findForUpdate($rescueRequest);
+
+        $this->assertTrue($locked->is($rescueRequest));
+        $this->assertSame(RescueRequestStatus::EmResgate, $locked->status);
+        $this->assertSame(RescueRequestStatus::Pendente, $rescueRequest->status);
+    }
+
     #[DataProvider('allStatuses')]
     #[TestDox('create() deve persistir cada status possível do enum e lê-lo de volta como o mesmo caso do enum.')]
     public function test_create_persists_each_status_value(RescueRequestStatus $status): void

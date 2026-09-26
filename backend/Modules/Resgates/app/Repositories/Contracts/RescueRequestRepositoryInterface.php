@@ -25,6 +25,12 @@ interface RescueRequestRepositoryInterface
     public function listWithFilters(array $filters, string $sortBy, string $sortDirection): Collection;
 
     /**
+     * Reload the rescue request from the database, locking its row until the current
+     * transaction ends, so concurrent status changes on it run one at a time.
+     */
+    public function findForUpdate(RescueRequest $rescueRequest): RescueRequest;
+
+    /**
      * Update a rescue request's attributes (typically its status and related fields).
      *
      * @param  array<string, mixed>  $attributes

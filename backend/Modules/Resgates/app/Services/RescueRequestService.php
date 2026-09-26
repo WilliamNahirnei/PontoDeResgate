@@ -49,11 +49,14 @@ class RescueRequestService
      */
     public function assume(RescueRequest $rescueRequest, User $operator): RescueRequest
     {
-        abort_if($rescueRequest->status !== RescueRequestStatus::Pendente, 409, 'Este pedido não está mais pendente.');
-
-        return $this->changeStatus($rescueRequest, $operator, RescueRequestStatus::EmResgate, [
-            'operator_id' => $operator->id,
-        ]);
+        return $this->changeStatus(
+            $rescueRequest,
+            $operator,
+            [RescueRequestStatus::Pendente],
+            'Este pedido não está mais pendente e pode ter sido assumido por outro operador.',
+            RescueRequestStatus::EmResgate,
+            ['operator_id' => $operator->id],
+        );
     }
 
     /**
@@ -63,9 +66,13 @@ class RescueRequestService
      */
     public function complete(RescueRequest $rescueRequest, User $operator): RescueRequest
     {
-        abort_if($rescueRequest->status !== RescueRequestStatus::EmResgate, 409, 'Este pedido não está em resgate.');
-
-        return $this->changeStatus($rescueRequest, $operator, RescueRequestStatus::Concluido);
+        return $this->changeStatus(
+            $rescueRequest,
+            $operator,
+            [RescueRequestStatus::EmResgate],
+            'Este pedido não está em resgate.',
+            RescueRequestStatus::Concluido,
+        );
     }
 
     /**
@@ -75,30 +82,41 @@ class RescueRequestService
      */
     public function cancel(RescueRequest $rescueRequest, User $operator, string $reason): RescueRequest
     {
-        abort_if(
-            in_array($rescueRequest->status, [RescueRequestStatus::Concluido, RescueRequestStatus::Cancelado], true),
-            409,
-            'Este pedido já foi finalizado e não pode ser cancelado.'
+        return $this->changeStatus(
+            $rescueRequest,
+            $operator,
+            [RescueRequestStatus::Pendente, RescueRequestStatus::EmResgate],
+            'Este pedido já foi finalizado e não pode ser cancelado.',
+            RescueRequestStatus::Cancelado,
+            ['cancellation_reason' => $reason],
         );
-
-        return $this->changeStatus($rescueRequest, $operator, RescueRequestStatus::Cancelado, [
-            'cancellation_reason' => $reason,
-        ]);
     }
 
     /**
      * Update the rescue request's status and register the change in the audit log.
      *
+     * The current status is checked against the row re-read with a lock inside the
+     * transaction, not against the given model: it was loaded before the transaction
+     * and may be stale when two operators act on the same request at the same time.
+     *
+     * @param  list<RescueRequestStatus>  $allowedStatuses
      * @param  array<string, mixed>  $extraAttributes
+     *
+     * @throws HttpException When the current status is not one of $allowedStatuses (409).
      */
     private function changeStatus(
         RescueRequest $rescueRequest,
         User $operator,
+        array $allowedStatuses,
+        string $notAllowedMessage,
         RescueRequestStatus $newStatus,
         array $extraAttributes = []
     ): RescueRequest {
-        return DB::transaction(function () use ($rescueRequest, $operator, $newStatus, $extraAttributes) {
+        return DB::transaction(function () use ($rescueRequest, $operator, $allowedStatuses, $notAllowedMessage, $newStatus, $extraAttributes) {
+            $rescueRequest = $this->rescueRequests->findForUpdate($rescueRequest);
             $previousStatus = $rescueRequest->status;
+
+            abort_unless(in_array($previousStatus, $allowedStatuses, true), 409, $notAllowedMessage);
 
             $rescueRequest = $this->rescueRequests->updateStatus($rescueRequest, [
                 ...$extraAttributes,

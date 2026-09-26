@@ -11,6 +11,7 @@ use Modules\Resgates\Models\RescueStatusLog;
 use Modules\Resgates\Repositories\Contracts\RescueRequestRepositoryInterface;
 use Modules\Resgates\Repositories\Contracts\RescueStatusLogRepositoryInterface;
 use Modules\Resgates\Repositories\RescueRequestRepository;
+use Modules\Resgates\Repositories\RescueStatusLogRepository;
 use Modules\Resgates\Services\RescueRequestService;
 use Modules\Usuarios\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -61,6 +62,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $rescueRequests->shouldReceive('updateStatus')
@@ -98,6 +100,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -122,6 +125,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -146,6 +150,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -170,6 +175,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -194,6 +200,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $rescueRequests->shouldReceive('updateStatus')
@@ -251,6 +258,7 @@ class RescueRequestServiceTest extends TestCase
         $reloaded = RescueRequest::factory()->emResgate()->make();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $rescueRequests->shouldReceive('updateStatus')->once()->andReturn($rescueRequest);
@@ -272,6 +280,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -281,7 +290,7 @@ class RescueRequestServiceTest extends TestCase
             $this->fail('Esperava que assume() lançasse uma HttpException (409).');
         } catch (HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
-            $this->assertSame('Este pedido não está mais pendente.', $exception->getMessage());
+            $this->assertSame('Este pedido não está mais pendente e pode ter sido assumido por outro operador.', $exception->getMessage());
         }
 
         $this->assertDatabaseHas('rescue_requests', [
@@ -299,6 +308,7 @@ class RescueRequestServiceTest extends TestCase
         $reloaded = RescueRequest::factory()->make(['status' => RescueRequestStatus::Concluido]);
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $rescueRequests->shouldReceive('updateStatus')
@@ -336,6 +346,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
@@ -361,6 +372,7 @@ class RescueRequestServiceTest extends TestCase
         $operator = User::factory()->create();
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
         $rescueRequests->shouldReceive('updateStatus')
@@ -396,8 +408,11 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido]);
         $operator = User::factory()->create();
 
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->with($rescueRequest)->andReturn($rescueRequest);
+
         $service = new RescueRequestService(
-            \Mockery::mock(RescueRequestRepositoryInterface::class),
+            $rescueRequests,
             \Mockery::mock(RescueStatusLogRepositoryInterface::class),
         );
 
@@ -434,5 +449,104 @@ class RescueRequestServiceTest extends TestCase
             'status' => RescueRequestStatus::Pendente->value,
             'operator_id' => null,
         ]);
+    }
+
+    /**
+     * Simula outro operador alterando o pedido depois que ele foi carregado:
+     * o objeto recebido pelo service continua com o status antigo, e só o
+     * banco tem o novo. É o que acontece quando duas requisições chegam ao
+     * mesmo tempo (route model binding carrega o pedido antes da transação).
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function changeBehindTheLoadedModel(RescueRequest $rescueRequest, array $attributes): void
+    {
+        RescueRequest::query()->whereKey($rescueRequest->id)->update($attributes);
+    }
+
+    #[TestDox('assume() deve rejeitar um pedido que outro operador assumiu depois de ele ser carregado, sem sobrescrever o operador responsável nem gravar log.')]
+    public function test_assume_rejects_a_request_assumed_by_another_operator_after_it_was_loaded(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
+        $firstOperator = User::factory()->create();
+        $secondOperator = User::factory()->create();
+        $this->changeBehindTheLoadedModel($rescueRequest, [
+            'status' => RescueRequestStatus::EmResgate,
+            'operator_id' => $firstOperator->id,
+        ]);
+
+        $service = new RescueRequestService(new RescueRequestRepository, new RescueStatusLogRepository);
+
+        try {
+            $service->assume($rescueRequest, $secondOperator);
+            $this->fail('Esperava que assume() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => RescueRequestStatus::EmResgate->value,
+            'operator_id' => $firstOperator->id,
+        ]);
+        $this->assertDatabaseMissing('rescue_status_logs', ['rescue_request_id' => $rescueRequest->id]);
+    }
+
+    #[TestDox('complete() deve rejeitar um pedido que outro operador cancelou depois de ele ser carregado, sem alterar o status nem gravar log.')]
+    public function test_complete_rejects_a_request_cancelled_by_another_operator_after_it_was_loaded(): void
+    {
+        $firstOperator = User::factory()->create();
+        $secondOperator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->create([
+            'status' => RescueRequestStatus::EmResgate,
+            'operator_id' => $firstOperator->id,
+        ]);
+        $this->changeBehindTheLoadedModel($rescueRequest, [
+            'status' => RescueRequestStatus::Cancelado,
+            'cancellation_reason' => 'Solicitante desistiu.',
+        ]);
+
+        $service = new RescueRequestService(new RescueRequestRepository, new RescueStatusLogRepository);
+
+        try {
+            $service->complete($rescueRequest, $secondOperator);
+            $this->fail('Esperava que complete() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => RescueRequestStatus::Cancelado->value,
+        ]);
+        $this->assertDatabaseMissing('rescue_status_logs', ['rescue_request_id' => $rescueRequest->id]);
+    }
+
+    #[TestDox('cancel() deve rejeitar um pedido que outro operador concluiu depois de ele ser carregado, sem alterar o status nem gravar log.')]
+    public function test_cancel_rejects_a_request_concluded_by_another_operator_after_it_was_loaded(): void
+    {
+        $firstOperator = User::factory()->create();
+        $secondOperator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->create([
+            'status' => RescueRequestStatus::EmResgate,
+            'operator_id' => $firstOperator->id,
+        ]);
+        $this->changeBehindTheLoadedModel($rescueRequest, ['status' => RescueRequestStatus::Concluido]);
+
+        $service = new RescueRequestService(new RescueRequestRepository, new RescueStatusLogRepository);
+
+        try {
+            $service->cancel($rescueRequest, $secondOperator, 'Solicitante desistiu.');
+            $this->fail('Esperava que cancel() lançasse uma HttpException (409).');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => RescueRequestStatus::Concluido->value,
+            'cancellation_reason' => null,
+        ]);
+        $this->assertDatabaseMissing('rescue_status_logs', ['rescue_request_id' => $rescueRequest->id]);
     }
 }

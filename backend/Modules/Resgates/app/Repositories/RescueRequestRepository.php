@@ -70,6 +70,11 @@ class RescueRequestRepository implements RescueRequestRepositoryInterface
      *
      * @param  array<string, mixed>  $attributes
      */
+    public function findForUpdate(RescueRequest $rescueRequest): RescueRequest
+    {
+        return RescueRequest::query()->lockForUpdate()->findOrFail($rescueRequest->id);
+    }
+
     public function updateStatus(RescueRequest $rescueRequest, array $attributes): RescueRequest
     {
         $rescueRequest->update($attributes);
