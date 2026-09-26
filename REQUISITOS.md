@@ -82,7 +82,8 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 ### 4.2 Gestão de status do pedido
 - **Assumir pedido**: altera o status para **"Em resgate"** e registra o operador responsável pelo atendimento.
-  - Um pedido só pode ser assumido por um operador. Quando dois operadores tentam assumir o mesmo pedido ao mesmo tempo, só o primeiro consegue; o outro vê uma mensagem de erro informando que o pedido já foi assumido por outro operador, sem o nome de quem o assumiu.
+  - Um pedido só pode ser assumido por um operador. Quando dois operadores tentam assumir o mesmo pedido ao mesmo tempo, só o primeiro consegue; o outro vê uma mensagem de erro informando que o pedido não está mais pendente e que pode ter sido assumido por outro operador, sem o nome de quem o assumiu.
+  - Essa mensagem é a mesma qualquer que seja o motivo de o pedido não estar mais pendente (assumido, concluído ou cancelado por outro operador).
   - Depois do erro, o painel do operador que não conseguiu assumir atualiza o pedido: ele aparece como "Em resgate", com o operador responsável, e sem o botão "Assumir".
 - **Concluir pedido**: altera o status para **"Concluído"**. Ao acionar "Concluir", o operador vê um campo para informar uma observação sobre o resgate antes de confirmar.
   - A observação é **opcional**: o operador pode confirmar a conclusão sem preenchê-la.
@@ -96,7 +97,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Cancelar pedido**: altera o status para **"Cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
 - **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
 - **Compartilhar localização**: permite compartilhar a localização do pedido com um voluntário, para que ele vá ao local.
-- **Ações sobre um pedido já alterado por outro operador**: se o status do pedido mudou depois que o operador abriu a tela (por exemplo, um operador cancela enquanto outro conclui), assumir, concluir ou cancelar esse pedido falha. O operador vê uma mensagem de erro informando que o pedido foi alterado por outro operador, e o painel atualiza o pedido com o status atual.
+- **Ações sobre um pedido já alterado por outro operador**: se o status do pedido mudou depois que o operador abriu a tela (por exemplo, um operador cancela enquanto outro conclui), assumir, concluir ou cancelar esse pedido falha. Ao concluir ou cancelar, o operador vê uma mensagem de erro informando que o pedido foi alterado por outro operador; ao assumir, vê a mensagem da regra de assumir acima. Em todos os casos, o painel atualiza o pedido com o status atual.
   - Uma ação que falha não altera o pedido e não gera entrada no log de operações (§4.3).
   - Se o diálogo de conclusão ou de cancelamento estiver aberto, ele é fechado junto com a mensagem de erro.
 
