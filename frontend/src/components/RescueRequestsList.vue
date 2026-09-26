@@ -26,8 +26,22 @@ const STATUS_COLORS = {
   cancelado: 'grey',
 }
 
+const PEOPLE_CATEGORIES = [
+  { field: 'men_count', label: 'Homens' },
+  { field: 'women_count', label: 'Mulheres' },
+  { field: 'children_count', label: 'Crianças' },
+  { field: 'elderly_count', label: 'Idosos' },
+]
+
 function formatDateTime(value) {
   return new Date(value).toLocaleString('pt-BR')
+}
+
+// Só as categorias informadas no pedido; zero conta como informado.
+function peopleComposition(rescueRequest) {
+  return PEOPLE_CATEGORIES.filter(({ field }) => rescueRequest[field] != null)
+    .map(({ field, label }) => `${label}: ${rescueRequest[field]}`)
+    .join(' · ')
 }
 </script>
 
@@ -52,6 +66,9 @@ function formatDateTime(value) {
       <div class="text-body-2 text-medium-emphasis">
         {{ rescueRequest.total_people ?? '?' }} pessoa(s)
         <span v-if="rescueRequest.animals_count">· {{ rescueRequest.animals_count }} animal(is)</span>
+      </div>
+      <div v-if="peopleComposition(rescueRequest)" class="text-body-2 text-medium-emphasis">
+        {{ peopleComposition(rescueRequest) }}
       </div>
       <div v-if="rescueRequest.reference_point" class="text-body-2 text-medium-emphasis">
         Referência: {{ rescueRequest.reference_point }}

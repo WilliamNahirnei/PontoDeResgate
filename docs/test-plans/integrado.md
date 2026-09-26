@@ -23,7 +23,7 @@
 | Requisito (`REQUISITOS.md`) | Módulo(s) | Camadas | Status geral | Cenários |
 |---|---|---|---|---|
 | §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — sessão aberta de operador desativado Não implementado (USR-61) | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80 |
-| §3 Tela pública de pedido | Resgates | E2E | Parcial — quantidades por categoria não aparecem no painel: teste escrito, falha por bug (RES-125) | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125 |
+| §3 Tela pública de pedido | Resgates | E2E | Implementado | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125 |
 | §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — hover de pedido sem total não diz que ele não foi informado: teste escrito, falha por bug (RES-146); "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153 |
 | §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — concorrência entre operadores (mensagem de erro, atualização do painel, nome não exposto, diálogo fechado) Não implementada (RES-118, RES-129, RES-154, RES-155); observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155 |
 | §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, CRZ-10, CRZ-11 |
@@ -50,9 +50,9 @@
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 20 | 46 | 5 | 71 |
+| Implementado | 20 | 47 | 5 | 72 |
 | Planejado | 0 | 0 | 0 | 0 |
-| Não coberto | 0 | 2 | 0 | 2 |
+| Não coberto | 0 | 1 | 0 | 1 |
 | Não implementado | 1 | 21 | 1 | 23 |
 | **Total de cenários** | **21** | **69** | **6** | **96** |
 
@@ -66,4 +66,5 @@
 > teste apagado e voltaram a `Planejado` (USR-21, USR-55, USR-57, RES-40, CRZ-04); no mesmo dia
 > os cinco foram reescritos e voltaram a `Implementado`. Ainda em 2026-09-24 os 46 cenários
 > `Não coberto` ganharam teste; 44 passam e 2 falham por bug (RES-125, RES-146), e por isso
-> continuam `Não coberto`.
+> continuam `Não coberto`. Em 2026-09-26 o bug do RES-125 foi corrigido e ele passou a
+> `Implementado`.
