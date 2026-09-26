@@ -1,4 +1,14 @@
 import { test, expect } from '../fixtures/auth'
+import { adminMasterToken, createOperator } from '../fixtures/operators'
+
+const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
+
+async function loginThroughForm(page, email: string, password: string) {
+  await page.goto('/login')
+  await page.getByLabel('E-mail').fill(email)
+  await page.getByLabel('Senha').fill(password)
+  await page.getByRole('button', { name: 'Entrar' }).click()
+}
 
 test.describe('Login', () => {
   test('login válido redireciona para o painel', async ({ page }) => {
@@ -55,5 +65,71 @@ test.describe('Login', () => {
     // mascararia o logout. Basta confirmar que o storage foi limpo.
     const remainingToken = await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))
     expect(remainingToken).toBeNull()
+  })
+
+  test('visitante sem sessão que acessa direto as telas de admin master é levado ao login', async ({ page }) => {
+    for (const path of ['/painel/operadores', '/painel/operadores/novo', '/painel/logs']) {
+      await page.goto(path)
+
+      await expect(page).toHaveURL(/\/login$/)
+      await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
+    }
+  })
+
+  test('operador desativado pelo admin master não consegue entrar pela tela de login', async ({ page, request }) => {
+    const operator = await createOperator(request)
+    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, {
+      headers: { Authorization: `Bearer ${await adminMasterToken(request)}` },
+    })
+
+    await loginThroughForm(page, operator.email, operator.password)
+
+    await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
+    await expect(page).toHaveURL(/\/login$/)
+  })
+
+  test('operador reativado volta a conseguir entrar pela tela de login', async ({ page, request }) => {
+    const operator = await createOperator(request)
+    const adminToken = await adminMasterToken(request)
+    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    })
+    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/activate`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    })
+
+    await loginThroughForm(page, operator.email, operator.password)
+
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(page).toHaveURL(/\/painel$/)
+  })
+
+  test('depois do logout, voltar no navegador não reabre o painel', async ({ page, request }) => {
+    // Login pela tela, e não pela fixture: a fixture reinjeta o token a cada
+    // carregamento de documento e mascararia o logout na navegação para trás.
+    const operator = await createOperator(request)
+    await loginThroughForm(page, operator.email, operator.password)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Sair' }).click()
+    await expect(page).toHaveURL(/\/login$/)
+
+    await page.goBack()
+
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toHaveCount(0)
+  })
+
+  test('recarregar a página com o painel aberto mantém a sessão do operador', async ({ page, request }) => {
+    const operator = await createOperator(request)
+    await loginThroughForm(page, operator.email, operator.password)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+
+    await page.reload()
+
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(page.getByText(operator.name)).toBeVisible()
+    await expect(page).toHaveURL(/\/painel$/)
   })
 })

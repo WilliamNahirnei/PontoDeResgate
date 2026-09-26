@@ -20,7 +20,7 @@ type AuthFixtures = {
   loginAsNewOperator: () => Promise<OperatorCredentials>
 }
 
-async function injectSession(page, token: string, user: unknown) {
+export async function injectSession(page, token: string, user: unknown) {
   await page.addInitScript(
     ([tokenKey, userKey, injectedToken, injectedUser]) => {
       window.localStorage.setItem(tokenKey, injectedToken)

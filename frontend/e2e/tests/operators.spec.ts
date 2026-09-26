@@ -1,6 +1,8 @@
 import { test, expect } from '../fixtures/auth'
+import { adminMasterToken, createOperator } from '../fixtures/operators'
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
 
 test.describe('Gestão de operadores', () => {
   test('admin master cadastra um novo operador pela tela', async ({ page, loginAsAdminMaster }) => {
@@ -126,5 +128,172 @@ test.describe('Gestão de operadores', () => {
     await row.getByRole('button', { name: 'Ativar' }).click()
     await expect(page.getByText('Operador ativado com sucesso.')).toBeVisible()
     await expect(row).toContainText('Ativo')
+  })
+
+  test('cadastro com e-mail já existente mostra mensagem de erro e mantém o formulário', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const existing = await createOperator(request)
+
+    await page.goto('/painel/operadores/novo')
+
+    const name = `Operador Duplicado ${Date.now()}`
+    await page.getByLabel('Nome').fill(name)
+    await page.getByLabel('E-mail').fill(existing.email)
+    await page.getByLabel('Senha').fill('senha-e2e-123')
+    await page.getByRole('button', { name: 'Cadastrar' }).click()
+
+    // Os campos do Vuetify também têm role="alert" (vazios); o erro é o que tem texto.
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible()
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+    await expect(page.getByLabel('Nome')).toHaveValue(name)
+    await expect(page.getByLabel('E-mail')).toHaveValue(existing.email)
+  })
+
+  test('cadastro sem nome, sem e-mail, sem senha ou com senha fraca mostra erro e não cadastra o operador', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const adminToken = await adminMasterToken(request)
+    const unique = Date.now()
+
+    const cases = [
+      { field: 'Nome', data: { name: '', email: `e2e.semnome.${unique}@pontoderesgate.local`, password: 'senha-e2e-123' } },
+      { field: 'E-mail', data: { name: `Operador Sem Email ${unique}`, email: '', password: 'senha-e2e-123' } },
+      { field: 'Senha', data: { name: `Operador Sem Senha ${unique}`, email: `e2e.semsenha.${unique}@pontoderesgate.local`, password: '' } },
+      { field: null, data: { name: `Operador Senha Fraca ${unique}`, email: `e2e.senhafraca.${unique}@pontoderesgate.local`, password: '123' } },
+    ]
+
+    for (const { field, data } of cases) {
+      await page.goto('/painel/operadores/novo')
+      await page.getByLabel('Nome').fill(data.name)
+      await page.getByLabel('E-mail').fill(data.email)
+      await page.getByLabel('Senha').fill(data.password)
+      await page.getByRole('button', { name: 'Cadastrar' }).click()
+
+      if (field) {
+        // Campo obrigatório vazio: o navegador bloqueia o envio e mostra a
+        // mensagem de validação nativa do campo.
+        const validationMessage = await page.getByLabel(field).evaluate((input: HTMLInputElement) => input.validationMessage)
+        expect(validationMessage).not.toBe('')
+      } else {
+        await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible()
+      }
+      await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+
+      const lookup = data.email || data.name
+      const response = await request.get(`${API_BASE_URL}/api/operators`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+        params: data.email ? { email: data.email } : { name: data.name },
+      })
+      const body = await response.json()
+      expect(body.data, `não deveria ter cadastrado ${lookup}`).toHaveLength(0)
+    }
+  })
+
+  test('operador recém-cadastrado entra com a senha do cadastro e vê o painel sem os itens de menu de admin master', async ({
+    page,
+    browser,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel/operadores/novo')
+
+    const unique = Date.now()
+    const operator = {
+      name: `Operador Novo ${unique}`,
+      email: `e2e.novo.${unique}@pontoderesgate.local`,
+      password: 'senha-e2e-123',
+    }
+    await page.getByLabel('Nome').fill(operator.name)
+    await page.getByLabel('E-mail').fill(operator.email)
+    await page.getByLabel('Senha').fill(operator.password)
+    await page.getByRole('button', { name: 'Cadastrar' }).click()
+    await expect(page).toHaveURL(/\/painel\/operadores$/)
+
+    // Outro contexto, sem a sessão do admin master injetada.
+    const operatorContext = await browser.newContext({ baseURL: BASE_URL })
+    const operatorPage = await operatorContext.newPage()
+    await operatorPage.goto('/login')
+    await operatorPage.getByLabel('E-mail').fill(operator.email)
+    await operatorPage.getByLabel('Senha').fill(operator.password)
+    await operatorPage.getByRole('button', { name: 'Entrar' }).click()
+
+    await expect(operatorPage.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(operatorPage.getByText(operator.name)).toBeVisible()
+    await expect(operatorPage.getByRole('link', { name: 'Painel' })).toBeVisible()
+    await expect(operatorPage.getByRole('link', { name: 'Operadores' })).toHaveCount(0)
+    await expect(operatorPage.getByRole('link', { name: 'Logs' })).toHaveCount(0)
+
+    await operatorContext.close()
+  })
+
+  test('a lista mostra só operadores, nunca o admin master, em ordem alfabética de nome', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const namePrefix = `Operador Ordem ${unique}`
+    // Cadastrados fora de ordem, para a ordenação não vir de graça.
+    for (const suffix of ['C', 'A', 'B']) {
+      await createOperator(request, { name: `${namePrefix} ${suffix}` })
+    }
+
+    await page.goto('/painel/operadores')
+    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill(namePrefix)
+
+    await expect(page.getByRole('row', { name: new RegExp(`${namePrefix} C`) })).toBeVisible()
+    const rowNames = await page.getByRole('row').filter({ hasText: namePrefix }).allInnerTexts()
+    expect(rowNames.map((text) => text.match(new RegExp(`${namePrefix} ([ABC])`))?.[1])).toEqual(['A', 'B', 'C'])
+
+    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill('')
+    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill('admin@pontoderesgate.local')
+    await expect(page.getByText('Nenhum operador encontrado.')).toBeVisible()
+  })
+
+  test('filtros de nome e de e-mail combinados; sem correspondência a lista mostra "Nenhum operador encontrado."', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const namePrefix = `Operador Combinado ${unique}`
+    const operatorA = await createOperator(request, { name: `${namePrefix} A`, email: `e2e.combinado.${unique}.a@pontoderesgate.local` })
+    const operatorB = await createOperator(request, { name: `${namePrefix} B`, email: `e2e.combinado.${unique}.b@pontoderesgate.local` })
+
+    await page.goto('/painel/operadores')
+
+    const rowA = page.getByRole('row', { name: new RegExp(operatorA.name) })
+    const rowB = page.getByRole('row', { name: new RegExp(operatorB.name) })
+
+    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill(namePrefix)
+    await expect(rowA).toBeVisible()
+    await expect(rowB).toBeVisible()
+
+    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill(operatorB.email)
+    await expect(rowA).toHaveCount(0)
+    await expect(rowB).toBeVisible()
+
+    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill(`e2e.inexistente.${unique}@pontoderesgate.local`)
+    await expect(page.getByText('Nenhum operador encontrado.')).toBeVisible()
+    await expect(rowB).toHaveCount(0)
+  })
+
+  test('o botão "Novo operador" da lista leva ao formulário de cadastro', async ({ page, loginAsAdminMaster }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel/operadores')
+
+    await page.getByRole('link', { name: 'Novo operador' }).click()
+
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+    await expect(page.getByRole('button', { name: 'Cadastrar' })).toBeVisible()
   })
 })

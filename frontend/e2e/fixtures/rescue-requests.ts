@@ -11,6 +11,7 @@ type RescueRequest = {
   status: string
   latitude: number
   longitude: number
+  created_at: string
 }
 
 let cachedAdminToken: string | null = null
@@ -63,4 +64,27 @@ export async function createRescueRequest(
   }
 
   return created
+}
+
+type StatusAction = 'assume' | 'complete' | 'cancel'
+
+// Muda o status de um pedido via API, como preparação de estado. Sem token,
+// age como admin master; com token, age como o operador dono dele.
+export async function changeRescueRequestStatus(
+  request: APIRequestContext,
+  rescueRequestId: number,
+  action: StatusAction,
+  token?: string,
+): Promise<void> {
+  const authToken = token ?? (await getAdminToken(request))
+  const data = action === 'cancel' ? { cancellation_reason: 'Cancelado como preparação de teste E2E.' } : undefined
+
+  const response = await request.post(`${API_BASE_URL}/api/rescue-requests/${rescueRequestId}/${action}`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+    data,
+  })
+
+  if (!response.ok()) {
+    throw new Error(`changeRescueRequestStatus: ${action} do pedido ${rescueRequestId} respondeu ${response.status()}.`)
+  }
 }

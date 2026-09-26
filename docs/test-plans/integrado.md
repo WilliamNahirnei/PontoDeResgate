@@ -22,14 +22,14 @@
 
 | Requisito (`REQUISITOS.md`) | Módulo(s) | Camadas | Status geral | Cenários |
 |---|---|---|---|---|
-| §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — visitante nas rotas de admin (USR-70), voltar após logout (USR-79) e sessão após recarregar (USR-80) Não coberto; sessão aberta de operador desativado Não implementado (USR-61) | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80 |
-| §3 Tela pública de pedido | Resgates | E2E | Parcial — requisito negativo do painel (RES-79), geolocalização negada (RES-80), ajuste do pin (RES-81), pós-envio (RES-102), falha no envio (RES-103) e dados chegando ao painel (RES-125) Não coberto | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125 |
-| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — reflexo no mapa, enquadramento, não-reposicionamento, seleção pelo marcador, estado de abertura (status e ordenação), filtros combinados, painel vazio, hover sem total, ordenação por data/hora e filtros por categoria Não cobertos; "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153 |
-| §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — cancelar em atendimento, operador diferente, botões por status, operador no card e `navigator.share` Não cobertos; concorrência entre operadores (mensagem de erro, atualização do painel, nome não exposto, diálogo fechado) Não implementada (RES-118, RES-129, RES-154, RES-155); observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155 |
-| §4.3 Log de operações | Resgates + Usuarios | E2E | Parcial — ação pela UI → log com operador correto (CRZ-10), histórico após desativação (CRZ-11), ação recusada sem log (RES-157) e compartilhar sem log (RES-158) Não cobertos | RES-157, RES-158, CRZ-10, CRZ-11 |
-| §4.4 Consulta de logs de operações | Resgates + Usuarios | E2E | Parcial — operador e data/hora na tela (RES-120) Não coberto; observação da conclusão na entrada de log (RES-142–RES-144) Não implementada | RES-69, RES-120, RES-142–RES-144, CRZ-04, CRZ-06 |
-| §4.5 Cadastro e gestão de operadores | Usuarios | E2E | Parcial — desativado não entra (USR-72), reativado volta (USR-73), novo operador entra (USR-74), validação do cadastro (USR-75), conteúdo/filtros/botão da lista (USR-76–USR-78) e erro de e-mail duplicado (USR-69) Não cobertos | USR-54–USR-57, USR-69, USR-72–USR-78 |
-| §7 Status de um pedido (nenhum pedido é excluído) | Resgates | E2E | Não coberto — ausência de ação de excluir (RES-156); botões por status em RES-116 | RES-116, RES-156 |
+| §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — sessão aberta de operador desativado Não implementado (USR-61) | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80 |
+| §3 Tela pública de pedido | Resgates | E2E | Parcial — quantidades por categoria não aparecem no painel: teste escrito, falha por bug (RES-125) | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125 |
+| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — hover de pedido sem total não diz que ele não foi informado: teste escrito, falha por bug (RES-146); "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153 |
+| §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — concorrência entre operadores (mensagem de erro, atualização do painel, nome não exposto, diálogo fechado) Não implementada (RES-118, RES-129, RES-154, RES-155); observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155 |
+| §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, CRZ-10, CRZ-11 |
+| §4.4 Consulta de logs de operações | Resgates + Usuarios | E2E | Parcial — observação da conclusão na entrada de log (RES-142–RES-144) Não implementada | RES-69, RES-120, RES-142–RES-144, CRZ-04, CRZ-06 |
+| §4.5 Cadastro e gestão de operadores | Usuarios | E2E | Implementado | USR-54–USR-57, USR-69, USR-72–USR-78 |
+| §7 Status de um pedido (nenhum pedido é excluído) | Resgates | E2E | Implementado | RES-116, RES-156 |
 | §5 Alertas em tempo real (websocket) | Resgates + Usuarios | — | Não implementado / não confirmado | CRZ-05 |
 | §9 Ambiente de desenvolvimento (admin master semeado) | Usuarios | E2E | Coberto de forma implícita: o login de USR-18 usa as credenciais do seed | USR-18 |
 | Navegação condicional por papel (menus e rotas exclusivos de admin master) | Usuarios + Resgates | E2E | Implementado | USR-57, CRZ-04, CRZ-06 |
@@ -43,16 +43,16 @@
 | CRZ-04 | Navegação por papel | E2E | Admin master vê os itens de menu de gestão de operadores e de logs; operador comum não vê nenhum dos dois | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("admin master vê os itens de menu de gestão de operadores e de logs", "operador comum não vê os itens de menu de gestão de operadores nem de logs") | A metade negativa foi reescrita em 2026-09-24 (ver USR-57). |
 | CRZ-05 | Alertas em tempo real | — | Operadores conectados recebem um alerta via websocket quando um novo pedido é criado (`REQUISITOS.md` §5) | Não implementado | — | Nenhum código (`websocket`/`broadcast`/`pusher`/`reverb`) nem teste correspondente foi localizado em backend ou frontend. Precisa de uma investigação/confirmação de escopo antes de qualquer teste ser planejado para este item. Reverificado em 2026-09-18 com a mesma busca (`websocket`/`broadcast`/`pusher`/`reverb`/`echo`) em `backend/app`, `backend/Modules`, `backend/routes`, `backend/config` e `frontend/src`: o único resultado é `backend/config/modules.php` (caminho do gerador de canais do `nwidart/laravel-modules`), falso positivo. |
 | CRZ-06 | Navegação por papel | E2E | Operador comum que acessa diretamente a URL de gestão de operadores ou de logs é redirecionado ao painel | Implementado | `frontend/e2e/tests/panel-navigation.spec.ts` ("operador comum é redirecionado ao painel se acessar diretamente a gestão de operadores ou os logs") | Guarda de rota do frontend (`requiresAdminMaster` em `frontend/src/router/index.js`); o teste já existia, mas nenhum cenário o descrevia (CRZ-04 só fala de menu). |
-| CRZ-10 | Auditoria (operador × log) | E2E | Depois de um operador assumir, concluir ou cancelar pedidos pela UI, o admin master vê na tela de logs uma entrada para cada mudança, com o operador que agiu e a transição de status correta | Não coberto | — | `REQUISITOS.md` §4.3. RES-69 cria a mudança por API e só confere pedido e status; o operador não é conferido e o caminho ação pela UI → log não é exercitado. Exige duas sessões (operador e admin master). Quando a observação ao concluir existir (RES-130), o passo "concluir pela UI" passa pelo diálogo; a observação em si é conferida em RES-142 a RES-144, não aqui. |
-| CRZ-11 | Operadores × histórico | E2E | Desativar um operador que já atendeu pedidos não apaga o histórico: o card do pedido continua mostrando o operador responsável e a tela de logs continua listando as entradas dele | Não coberto | — | Integridade entre Usuarios e Resgates (`REQUISITOS.md` §4.2, §4.3 e §4.5). |
+| CRZ-10 | Auditoria (operador × log) | E2E | Depois de um operador assumir, concluir ou cancelar pedidos pela UI, o admin master vê na tela de logs uma entrada para cada mudança, com o operador que agiu e a transição de status correta | Implementado | `frontend/e2e/tests/rescue-status-logs.spec.ts` ("depois de um operador assumir, concluir e cancelar pela UI, o admin master vê cada mudança nos logs com o operador que agiu") | Duas sessões: o operador age num contexto de navegador e o admin master confere os logs em outro. |
+| CRZ-11 | Operadores × histórico | E2E | Desativar um operador que já atendeu pedidos não apaga o histórico: o card do pedido continua mostrando o operador responsável e a tela de logs continua listando as entradas dele | Implementado | `frontend/e2e/tests/rescue-status-logs.spec.ts` ("desativar um operador que já atendeu pedidos não apaga o histórico no card nem na tela de logs") | |
 
 ## Visão geral de cobertura
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 9 | 15 | 3 | 27 |
+| Implementado | 20 | 46 | 5 | 71 |
 | Planejado | 0 | 0 | 0 | 0 |
-| Não coberto | 11 | 33 | 2 | 46 |
+| Não coberto | 0 | 2 | 0 | 2 |
 | Não implementado | 1 | 21 | 1 | 23 |
 | **Total de cenários** | **21** | **69** | **6** | **96** |
 
@@ -64,4 +64,6 @@
 > isoladamente, com o banco recriado do zero (`migrate:fresh --seed`) antes de cada um, e
 > conferido contra a linha do plano; os que falharam ou não provavam o cenário tiveram o
 > teste apagado e voltaram a `Planejado` (USR-21, USR-55, USR-57, RES-40, CRZ-04); no mesmo dia
-> os cinco foram reescritos e voltaram a `Implementado`.
+> os cinco foram reescritos e voltaram a `Implementado`. Ainda em 2026-09-24 os 46 cenários
+> `Não coberto` ganharam teste; 44 passam e 2 falham por bug (RES-125, RES-146), e por isso
+> continuam `Não coberto`.
