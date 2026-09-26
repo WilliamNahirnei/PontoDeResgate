@@ -1,4 +1,4 @@
-import { test, expect } from '../fixtures/auth'
+import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
 import { createOperator } from '../fixtures/operators'
 
@@ -23,6 +23,27 @@ async function createOneRequestPerStatus(request, label: string) {
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
+
+const NOT_PENDING_MESSAGE = /não está mais pendente e pode ter sido assumido por outro operador/i
+const CHANGED_BY_ANOTHER_OPERATOR_MESSAGE = /alterado por outro operador/i
+
+// Abre o painel do operador A num segundo contexto de navegador: a disputa só
+// existe com duas sessões, cada uma com a própria tela carregada.
+async function openPanelAsAnotherOperator(browser, request) {
+  const operator = await createOperator(request)
+  const context = await browser.newContext({ baseURL: BASE_URL })
+  const operatorPage = await context.newPage()
+  await injectSession(operatorPage, operator.token, operator.user)
+  await operatorPage.goto('/painel')
+
+  return { operator, context, operatorPage }
+}
+
+async function cancelThroughDialog(page, rescueCard, reason: string) {
+  await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+  await page.getByLabel('Motivo do cancelamento').fill(reason)
+  await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+}
 
 test.describe('Painel — gestão de status do pedido', () => {
   test('operador assume um pedido pendente pela UI', async ({ page, request, loginAsAdminMaster }) => {
@@ -310,5 +331,152 @@ test.describe('Painel — gestão de status do pedido', () => {
       await expect(rescueCard.getByRole('button', { name: /excluir|apagar|remover|deletar/i })).toHaveCount(0)
       await expect(rescueCard.getByRole('link', { name: /excluir|apagar|remover|deletar/i })).toHaveCount(0)
     }
+  })
+
+  test.describe('disputa entre dois operadores com a página desatualizada', () => {
+    test('quem clica em Assumir num pedido que outro operador acabou de assumir vê que ele não está mais pendente e o painel atualiza o pedido', async ({
+      page,
+      request,
+      browser,
+      loginAsNewOperator,
+    }) => {
+      await loginAsNewOperator()
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Disputa Assumir ${Date.now()}` })
+      await page.goto('/painel')
+      const rescueCard = card(page, rescueRequest.requester_name)
+      await expect(rescueCard.getByText('Pendente', { exact: true })).toBeVisible()
+
+      const { operator, context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
+      const operatorCard = card(operatorPage, rescueRequest.requester_name)
+      await operatorCard.getByRole('button', { name: 'Assumir' }).click()
+      await expect(operatorCard.getByText('Em resgate', { exact: true })).toBeVisible()
+
+      await rescueCard.getByRole('button', { name: 'Assumir' }).click()
+
+      await expect(page.getByText(NOT_PENDING_MESSAGE)).toBeVisible()
+      await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+      await expect(rescueCard).toContainText(`Operador responsável: ${operator.name}`)
+      await expect(rescueCard.getByRole('button', { name: 'Assumir' })).toHaveCount(0)
+
+      await context.close()
+    })
+
+    test('a mensagem de quem perde a disputa ao assumir não mostra o nome do operador que assumiu o pedido', async ({
+      page,
+      request,
+      browser,
+      loginAsNewOperator,
+    }) => {
+      await loginAsNewOperator()
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Disputa Nome ${Date.now()}` })
+      await page.goto('/painel')
+      const rescueCard = card(page, rescueRequest.requester_name)
+      await expect(rescueCard.getByText('Pendente', { exact: true })).toBeVisible()
+
+      const { operator, context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
+      const operatorCard = card(operatorPage, rescueRequest.requester_name)
+      await operatorCard.getByRole('button', { name: 'Assumir' }).click()
+      await expect(operatorCard.getByText('Em resgate', { exact: true })).toBeVisible()
+
+      await rescueCard.getByRole('button', { name: 'Assumir' }).click()
+
+      const message = page.getByText(NOT_PENDING_MESSAGE)
+      await expect(message).toBeVisible()
+      await expect(message).not.toContainText(operator.name)
+
+      await context.close()
+    })
+
+    test('quem clica em Assumir num pedido que outro operador cancelou vê a mesma mensagem e o painel mostra o pedido cancelado', async ({
+      page,
+      request,
+      browser,
+      loginAsNewOperator,
+    }) => {
+      await loginAsNewOperator()
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Disputa Assumir Anulado ${Date.now()}` })
+      await page.goto('/painel')
+      const rescueCard = card(page, rescueRequest.requester_name)
+      await expect(rescueCard.getByText('Pendente', { exact: true })).toBeVisible()
+
+      const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
+      const operatorCard = card(operatorPage, rescueRequest.requester_name)
+      await cancelThroughDialog(operatorPage, operatorCard, 'Solicitante já foi resgatado por vizinhos.')
+      await expect(operatorCard.getByText('Cancelado', { exact: true })).toBeVisible()
+
+      await rescueCard.getByRole('button', { name: 'Assumir' }).click()
+
+      await expect(page.getByText(NOT_PENDING_MESSAGE)).toBeVisible()
+      await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+      await expect(rescueCard.getByRole('button', { name: 'Assumir' })).toHaveCount(0)
+
+      await context.close()
+    })
+
+    test('concluir ou cancelar um pedido que outro operador alterou mostra que ele foi alterado por outro operador e o painel mostra o status atual', async ({
+      page,
+      request,
+      browser,
+      loginAsNewOperator,
+    }) => {
+      await loginAsNewOperator()
+      const unique = Date.now()
+      const toComplete = await createRescueRequest(request, { requester_name: `E2E Disputa Concluir ${unique}` })
+      const toCancel = await createRescueRequest(request, { requester_name: `E2E Disputa Encerrar ${unique}` })
+      await changeRescueRequestStatus(request, toComplete.id, 'assume')
+      await changeRescueRequestStatus(request, toCancel.id, 'assume')
+      await page.goto('/painel')
+      const toCompleteCard = card(page, toComplete.requester_name)
+      const toCancelCard = card(page, toCancel.requester_name)
+      await expect(toCompleteCard.getByText('Em resgate', { exact: true })).toBeVisible()
+      await expect(toCancelCard.getByText('Em resgate', { exact: true })).toBeVisible()
+
+      const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
+      // A cancela o pedido que B vai tentar concluir, e conclui o que B vai tentar cancelar.
+      const operatorToCompleteCard = card(operatorPage, toComplete.requester_name)
+      await cancelThroughDialog(operatorPage, operatorToCompleteCard, 'Equipe não conseguiu chegar ao local.')
+      await expect(operatorToCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
+      const operatorToCancelCard = card(operatorPage, toCancel.requester_name)
+      await operatorToCancelCard.getByRole('button', { name: 'Concluir' }).click()
+      await expect(operatorToCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
+
+      await toCompleteCard.getByRole('button', { name: 'Concluir' }).click()
+      await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
+      await expect(toCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
+
+      await cancelThroughDialog(page, toCancelCard, 'Tentativa de cancelar pedido já concluído.')
+      await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
+      await expect(toCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
+
+      await context.close()
+    })
+
+    test('se o diálogo de cancelamento está aberto quando o pedido é alterado por outro operador, ele fecha junto com a mensagem de erro', async ({
+      page,
+      request,
+      browser,
+      loginAsNewOperator,
+    }) => {
+      await loginAsNewOperator()
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Disputa Dialogo ${Date.now()}` })
+      await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+      await page.goto('/painel')
+      const rescueCard = card(page, rescueRequest.requester_name)
+      await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+      await page.getByLabel('Motivo do cancelamento').fill('Motivo digitado antes da mudança do outro operador.')
+
+      const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
+      const operatorCard = card(operatorPage, rescueRequest.requester_name)
+      await operatorCard.getByRole('button', { name: 'Concluir' }).click()
+      await expect(operatorCard.getByText('Concluído', { exact: true })).toBeVisible()
+
+      await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+
+      await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
+      await expect(page.getByLabel('Motivo do cancelamento')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Confirmar cancelamento' })).toHaveCount(0)
+
+      await context.close()
+    })
   })
 })
