@@ -63,6 +63,8 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Ao carregar os pedidos, o mapa se ajusta automaticamente para enquadrar todos eles (não fica centralizado num local fixo/padrão) — a implantação do sistema pode ser em qualquer cidade, então o mapa não pode presumir uma região. Esse enquadramento automático acontece apenas na primeira carga dos pedidos; atualizações, mudanças de status e mudanças de filtro seguintes não reposicionam o mapa, para não atrapalhar o operador.
 - Quando não há nenhum pedido na primeira carga, o painel informa que não há pedidos a exibir.
 - **Lista**: exibe os pedidos em formato de lista.
+- O card de cada pedido na lista mostra a quantidade total de pessoas. Quando ela não foi informada, o card indica que não foi informada, com o mesmo texto do hover do mapa.
+- O card mostra as quantidades por categoria informadas (homens, mulheres, crianças, idosos); as não informadas não aparecem.
 - Ao clicar em um pedido na lista, ele fica em destaque no mapa e mostra as mesmas informações do hover (quantidade total de pessoas e data/hora do pedido), que permanecem visíveis até outro pedido ser clicado.
 - Ao clicar em um marcador no mapa, o pedido fica selecionado da mesma forma: o marcador fica em destaque com as mesmas informações do hover, e o card do pedido fica em destaque na lista.
 - Quando o pedido é selecionado pelo mapa e o card dele não está visível na lista, a lista rola até o card.
