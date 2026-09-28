@@ -1,6 +1,7 @@
 import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
 import { createOperator } from '../fixtures/operators'
+import { holdStatusAction } from '../fixtures/status-actions'
 
 function card(page, name: string) {
   return page.locator('.rescue-requests-list .v-card', { hasText: name })
@@ -26,6 +27,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
 
 const NOT_PENDING_MESSAGE = /não está mais pendente e pode ter sido assumido por outro operador/i
 const CHANGED_BY_ANOTHER_OPERATOR_MESSAGE = /alterado por outro operador/i
+// Qualquer mensagem de erro que o painel mostra quando uma ação de status falha.
+const STATUS_ACTION_ERROR_MESSAGE = /não está mais pendente|alterado por outro operador|não foi possível alterar o pedido/i
 
 // Abre o painel do operador A num segundo contexto de navegador: a disputa só
 // existe com duas sessões, cada uma com a própria tela carregada.
@@ -404,6 +407,134 @@ test.describe('Painel — gestão de status do pedido', () => {
       await expect(rescueCard.getByRole('button', { name: /excluir|apagar|remover|deletar/i })).toHaveCount(0)
       await expect(rescueCard.getByRole('link', { name: /excluir|apagar|remover|deletar/i })).toHaveCount(0)
     }
+  })
+
+  test.describe('ação em andamento (duplo clique)', () => {
+    test('duplo clique em Assumir deixa o pedido em resgate, com o operador responsável, sem mensagem de erro', async ({
+      page,
+      request,
+      loginAsNewOperator,
+    }) => {
+      const operator = await loginAsNewOperator()
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Duplo Assumir ${unique}` })
+      const rescueCard = card(page, rescueRequest.requester_name)
+
+      await page.goto('/painel')
+      const assume = await holdStatusAction(page, rescueRequest.id, 'assume')
+      await rescueCard.getByRole('button', { name: 'Assumir' }).dblclick()
+      await assume.releaseAndWait()
+
+      await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+      await expect(rescueCard).toContainText(`Operador responsável: ${operator.name}`)
+      await expect(page.getByText(STATUS_ACTION_ERROR_MESSAGE)).toHaveCount(0)
+    })
+
+    test('duplo clique em Concluir deixa o pedido concluído, sem mensagem de erro', async ({
+      page,
+      request,
+      loginAsAdminMaster,
+    }) => {
+      await loginAsAdminMaster()
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Duplo Concluir ${unique}` })
+      await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+      const rescueCard = card(page, rescueRequest.requester_name)
+
+      await page.goto('/painel')
+      const complete = await holdStatusAction(page, rescueRequest.id, 'complete')
+      await rescueCard.getByRole('button', { name: 'Concluir' }).dblclick()
+      await complete.releaseAndWait()
+
+      await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+      await expect(page.getByText(STATUS_ACTION_ERROR_MESSAGE)).toHaveCount(0)
+    })
+
+    test('duplo clique em Confirmar cancelamento deixa o pedido cancelado e fecha o diálogo, sem mensagem de erro', async ({
+      page,
+      request,
+      loginAsAdminMaster,
+    }) => {
+      await loginAsAdminMaster()
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Duplo Cancelar ${unique}` })
+      const rescueCard = card(page, rescueRequest.requester_name)
+
+      await page.goto('/painel')
+      await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+      await page.getByLabel('Motivo do cancelamento').fill('Duplo clique ao confirmar.')
+      const cancel = await holdStatusAction(page, rescueRequest.id, 'cancel')
+      await page.getByRole('button', { name: 'Confirmar cancelamento' }).dblclick()
+      await cancel.releaseAndWait()
+
+      await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Confirmar cancelamento' })).toHaveCount(0)
+      await expect(page.getByText(STATUS_ACTION_ERROR_MESSAGE)).toHaveCount(0)
+    })
+
+    test('enquanto a ação está em andamento, o botão acionado fica indisponível e depois volta a refletir o status', async ({
+      page,
+      request,
+      loginAsAdminMaster,
+    }) => {
+      await loginAsAdminMaster()
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const toFinish = await createRescueRequest(request, { requester_name: `E2E Em Andamento Concluir ${unique}` })
+      const toCancel = await createRescueRequest(request, { requester_name: `E2E Em Andamento Cancelar ${unique}` })
+      const toFinishCard = card(page, toFinish.requester_name)
+      const toCancelCard = card(page, toCancel.requester_name)
+      await page.goto('/painel')
+
+      const assume = await holdStatusAction(page, toFinish.id, 'assume')
+      await toFinishCard.getByRole('button', { name: 'Assumir' }).click()
+      await expect(toFinishCard.getByRole('button', { name: 'Assumir' })).toBeDisabled()
+      await assume.releaseAndWait()
+      await expect(toFinishCard.getByText('Em resgate', { exact: true })).toBeVisible()
+      await expect(toFinishCard.getByRole('button', { name: 'Concluir' })).toBeEnabled()
+
+      const complete = await holdStatusAction(page, toFinish.id, 'complete')
+      await toFinishCard.getByRole('button', { name: 'Concluir' }).click()
+      await expect(toFinishCard.getByRole('button', { name: 'Concluir' })).toBeDisabled()
+      await complete.releaseAndWait()
+      await expect(toFinishCard.getByText('Concluído', { exact: true })).toBeVisible()
+      await expect(toFinishCard.getByRole('button', { name: 'Concluir' })).toHaveCount(0)
+
+      await toCancelCard.getByRole('button', { name: 'Cancelar' }).click()
+      await page.getByLabel('Motivo do cancelamento').fill('Botão indisponível durante a ação.')
+      const cancel = await holdStatusAction(page, toCancel.id, 'cancel')
+      await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+      await expect(page.getByRole('button', { name: 'Confirmar cancelamento' })).toBeDisabled()
+      await cancel.releaseAndWait()
+      await expect(toCancelCard.getByText('Cancelado', { exact: true })).toBeVisible()
+    })
+
+    test('enquanto a ação sobre um pedido está em andamento, os botões dos demais pedidos continuam disponíveis', async ({
+      page,
+      request,
+      loginAsAdminMaster,
+    }) => {
+      await loginAsAdminMaster()
+      const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const inProgress = await createRescueRequest(request, { requester_name: `E2E Trava Pedido ${unique}` })
+      const other = await createRescueRequest(request, { requester_name: `E2E Trava Outro ${unique}` })
+      const inProgressCard = card(page, inProgress.requester_name)
+      const otherCard = card(page, other.requester_name)
+      await page.goto('/painel')
+
+      const assume = await holdStatusAction(page, inProgress.id, 'assume')
+      await inProgressCard.getByRole('button', { name: 'Assumir' }).click()
+      // Confirma que a ação está mesmo em andamento e travada; sem isso, os botões
+      // do outro pedido estariam disponíveis só porque nada trava.
+      await expect(inProgressCard.getByRole('button', { name: 'Assumir' })).toBeDisabled()
+
+      await expect(otherCard.getByRole('button', { name: 'Assumir' })).toBeEnabled()
+      await expect(otherCard.getByRole('button', { name: 'Cancelar' })).toBeEnabled()
+      await otherCard.getByRole('button', { name: 'Assumir' }).click()
+      await expect(otherCard.getByText('Em resgate', { exact: true })).toBeVisible()
+
+      await assume.releaseAndWait()
+      await expect(inProgressCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    })
   })
 
   test.describe('disputa entre dois operadores com a página desatualizada', () => {

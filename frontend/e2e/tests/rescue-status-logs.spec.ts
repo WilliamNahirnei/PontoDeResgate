@@ -1,6 +1,7 @@
 import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
 import { adminMasterToken, createOperator, loginViaApi } from '../fixtures/operators'
+import { holdStatusAction } from '../fixtures/status-actions'
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
@@ -141,6 +142,48 @@ test.describe('Tela de logs de auditoria', () => {
     await expect(rows).toContainText(firstOperator.name)
     await expect(rows).toContainText('Pendente')
     await expect(rows).toContainText('Em resgate')
+  })
+
+  test('depois de um duplo clique em Assumir, Concluir ou Confirmar cancelamento, a tela de logs mostra uma única entrada por mudança', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const toFinish = await createRescueRequest(request, { requester_name: `E2E Log Duplo Concluir ${unique}` })
+    const toCancel = await createRescueRequest(request, { requester_name: `E2E Log Duplo Cancelar ${unique}` })
+    const toFinishCard = page.locator('.rescue-requests-list .v-card', { hasText: toFinish.requester_name })
+    const toCancelCard = page.locator('.rescue-requests-list .v-card', { hasText: toCancel.requester_name })
+    await page.goto('/painel')
+
+    // Cada ação fica segurada até o duplo clique terminar, para o segundo clique
+    // acontecer com a primeira ação ainda em andamento.
+    const assume = await holdStatusAction(page, toFinish.id, 'assume')
+    await toFinishCard.getByRole('button', { name: 'Assumir' }).dblclick()
+    await assume.releaseAndWait()
+    await expect(toFinishCard.getByText('Em resgate', { exact: true })).toBeVisible()
+
+    const complete = await holdStatusAction(page, toFinish.id, 'complete')
+    await toFinishCard.getByRole('button', { name: 'Concluir' }).dblclick()
+    await complete.releaseAndWait()
+    await expect(toFinishCard.getByText('Concluído', { exact: true })).toBeVisible()
+
+    await toCancelCard.getByRole('button', { name: 'Cancelar' }).click()
+    await page.getByLabel('Motivo do cancelamento').fill('Duplo clique ao confirmar.')
+    const cancel = await holdStatusAction(page, toCancel.id, 'cancel')
+    await page.getByRole('button', { name: 'Confirmar cancelamento' }).dblclick()
+    await cancel.releaseAndWait()
+    await expect(toCancelCard.getByText('Cancelado', { exact: true })).toBeVisible()
+
+    await openLogs(page)
+
+    const toFinishRows = logRows(page, toFinish.requester_name)
+    await expect(toFinishRows).toHaveCount(2)
+    await expect(toFinishRows.filter({ hasText: 'Concluído' })).toHaveCount(1)
+    const toCancelRows = logRows(page, toCancel.requester_name)
+    await expect(toCancelRows).toHaveCount(1)
+    await expect(toCancelRows).toContainText('Cancelado')
   })
 
   test('usar "Compartilhar localização" em um pedido não gera entrada na tela de logs', async ({

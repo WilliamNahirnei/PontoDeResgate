@@ -103,6 +103,10 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Ações sobre um pedido já alterado por outro operador**: se o status do pedido mudou depois que o operador abriu a tela (por exemplo, um operador cancela enquanto outro conclui), assumir, concluir ou cancelar esse pedido falha. Ao concluir ou cancelar, o operador vê uma mensagem de erro informando que o pedido foi alterado por outro operador; ao assumir, vê a mensagem da regra de assumir acima. Em todos os casos, o painel atualiza o pedido com o status atual.
   - Uma ação que falha não altera o pedido e não gera entrada no log de operações (§4.3).
   - Se o diálogo de conclusão ou de cancelamento estiver aberto, ele é fechado junto com a mensagem de erro.
+- **Ação em andamento**: enquanto a ação de assumir, concluir ou cancelar um pedido está em andamento, o botão que o operador ou o admin master acionou ("Assumir", "Concluir" ou "Confirmar cancelamento") fica indisponível até a ação terminar.
+  - Clicar de novo nesse botão enquanto a ação está em andamento (por exemplo, com um duplo clique) não repete a ação: o pedido muda de status uma única vez e o log de operações (§4.3) ganha uma única entrada.
+  - Quem clicou duas vezes não vê mensagem de erro: vê apenas o resultado da ação, como se tivesse clicado uma vez.
+  - As ações dos demais pedidos continuam disponíveis enquanto a ação está em andamento.
 
 ### 4.3 Log de operações
 - Toda ação de um operador ou do admin master que altera o status de um pedido — assumir, concluir e cancelar — gera uma entrada no log de operações.
