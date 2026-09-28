@@ -356,7 +356,7 @@ class RescueRequestServiceTest extends TestCase
             $this->fail('Esperava que complete() lançasse uma HttpException (409).');
         } catch (HttpException $exception) {
             $this->assertSame(409, $exception->getStatusCode());
-            $this->assertSame('Este pedido não está em resgate.', $exception->getMessage());
+            $this->assertSame('Este pedido foi alterado por outro operador.', $exception->getMessage());
         }
 
         $this->assertDatabaseHas('rescue_requests', [
@@ -402,8 +402,8 @@ class RescueRequestServiceTest extends TestCase
         $service->cancel($rescueRequest, $operator, 'Equipe sem acesso ao local.');
     }
 
-    #[TestDox('cancel() deve explicar na mensagem de erro que o pedido já foi finalizado e não pode ser cancelado.')]
-    public function test_cancel_rejection_explains_that_the_request_is_already_finalized(): void
+    #[TestDox('cancel() deve informar na mensagem de erro que o pedido foi alterado por outro operador.')]
+    public function test_cancel_rejection_says_that_the_request_was_changed_by_another_operator(): void
     {
         $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido]);
         $operator = User::factory()->create();
@@ -420,7 +420,7 @@ class RescueRequestServiceTest extends TestCase
             $service->cancel($rescueRequest, $operator, 'Solicitante desistiu.');
             $this->fail('Esperava que cancel() lançasse uma HttpException (409).');
         } catch (HttpException $exception) {
-            $this->assertSame('Este pedido já foi finalizado e não pode ser cancelado.', $exception->getMessage());
+            $this->assertSame('Este pedido foi alterado por outro operador.', $exception->getMessage());
         }
     }
 

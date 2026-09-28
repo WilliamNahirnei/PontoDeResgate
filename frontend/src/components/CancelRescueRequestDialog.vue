@@ -38,7 +38,15 @@ function confirm() {
     <v-card>
       <v-card-title>Cancelar pedido</v-card-title>
       <v-card-text>
-        <v-textarea v-model="reason" label="Motivo do cancelamento" rows="3" autofocus required />
+        <v-textarea
+          v-model="reason"
+          label="Motivo do cancelamento"
+          rows="3"
+          counter="1000"
+          maxlength="1000"
+          autofocus
+          required
+        />
       </v-card-text>
       <v-card-actions>
         <v-spacer />

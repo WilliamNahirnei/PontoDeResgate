@@ -70,7 +70,7 @@ class RescueRequestService
             $rescueRequest,
             $operator,
             [RescueRequestStatus::EmResgate],
-            'Este pedido não está em resgate.',
+            'Este pedido foi alterado por outro operador.',
             RescueRequestStatus::Concluido,
         );
     }
@@ -86,7 +86,7 @@ class RescueRequestService
             $rescueRequest,
             $operator,
             [RescueRequestStatus::Pendente, RescueRequestStatus::EmResgate],
-            'Este pedido já foi finalizado e não pode ser cancelado.',
+            'Este pedido foi alterado por outro operador.',
             RescueRequestStatus::Cancelado,
             ['cancellation_reason' => $reason],
         );

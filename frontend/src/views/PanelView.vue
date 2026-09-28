@@ -33,6 +33,9 @@ const loading = ref(false)
 const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
 const shareFeedback = ref(false)
+const actionErrorMessage = ref('')
+
+const DEFAULT_ACTION_ERROR_MESSAGE = 'Não foi possível alterar o pedido. Tente novamente.'
 
 const statusFilter = ref('all')
 const minQuantities = ref(Object.fromEntries(QUANTITY_FIELDS.map(({ field }) => [field, ''])))
@@ -99,27 +102,46 @@ function handleSelect(id) {
   selectedId.value = id
 }
 
-async function handleAssume(rescueRequest) {
-  await api.post(`/api/rescue-requests/${rescueRequest.id}/assume`)
+// Uma ação recusada porque outro operador alterou o pedido (409) mostra a
+// mensagem da API, fecha o diálogo aberto e recarrega a lista, para o card
+// passar a mostrar o status atual. Outras falhas mantêm o diálogo aberto,
+// para o operador não perder o motivo digitado e poder tentar de novo.
+async function runStatusAction(action) {
+  actionErrorMessage.value = ''
+
+  try {
+    await action()
+  } catch (error) {
+    const isConflict = error.response?.status === 409
+    actionErrorMessage.value = (isConflict && error.response.data?.message) || DEFAULT_ACTION_ERROR_MESSAGE
+    if (!isConflict) {
+      return
+    }
+  }
+
+  cancelDialogRequest.value = null
   await fetchRescueRequests()
 }
 
-async function handleComplete(rescueRequest) {
-  await api.post(`/api/rescue-requests/${rescueRequest.id}/complete`)
-  await fetchRescueRequests()
+function handleAssume(rescueRequest) {
+  return runStatusAction(() => api.post(`/api/rescue-requests/${rescueRequest.id}/assume`))
+}
+
+function handleComplete(rescueRequest) {
+  return runStatusAction(() => api.post(`/api/rescue-requests/${rescueRequest.id}/complete`))
 }
 
 function openCancelDialog(rescueRequest) {
   cancelDialogRequest.value = rescueRequest
 }
 
-async function handleCancelConfirm(reason) {
+function handleCancelConfirm(reason) {
   const rescueRequest = cancelDialogRequest.value
-  await api.post(`/api/rescue-requests/${rescueRequest.id}/cancel`, {
-    cancellation_reason: reason,
-  })
-  cancelDialogRequest.value = null
-  await fetchRescueRequests()
+  return runStatusAction(() =>
+    api.post(`/api/rescue-requests/${rescueRequest.id}/cancel`, {
+      cancellation_reason: reason,
+    }),
+  )
 }
 
 function shareLocation(rescueRequest) {
@@ -225,6 +247,20 @@ onMounted(fetchRescueRequests)
       @update:model-value="(value) => { if (!value) cancelDialogRequest = null }"
       @confirm="handleCancelConfirm"
     />
+
+    <!-- Snackbar em vez de v-alert: fica acima do scrim quando o diálogo de
+         cancelamento continua aberto depois de uma falha. -->
+    <v-snackbar
+      :model-value="Boolean(actionErrorMessage)"
+      color="error"
+      timeout="-1"
+      @update:model-value="(value) => { if (!value) actionErrorMessage = '' }"
+    >
+      {{ actionErrorMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="actionErrorMessage = ''">Fechar</v-btn>
+      </template>
+    </v-snackbar>
 
     <v-snackbar v-model="shareFeedback" timeout="2500">
       Localização copiada para a área de transferência.

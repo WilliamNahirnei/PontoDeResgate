@@ -505,17 +505,22 @@ test.describe('Painel — gestão de status do pedido', () => {
       await expect(toCancelCard.getByText('Em resgate', { exact: true })).toBeVisible()
 
       const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
-      // A cancela o pedido que B vai tentar concluir, e conclui o que B vai tentar cancelar.
+      // A cancela o pedido que B vai tentar concluir.
       const operatorToCompleteCard = card(operatorPage, toComplete.requester_name)
       await cancelThroughDialog(operatorPage, operatorToCompleteCard, 'Equipe não conseguiu chegar ao local.')
       await expect(operatorToCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
-      const operatorToCancelCard = card(operatorPage, toCancel.requester_name)
-      await operatorToCancelCard.getByRole('button', { name: 'Concluir' }).click()
-      await expect(operatorToCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
 
       await toCompleteCard.getByRole('button', { name: 'Concluir' }).click()
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
       await expect(toCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
+
+      // A recusa acima recarrega a lista de B; só agora A conclui o pedido que B
+      // vai tentar cancelar, para o card de B estar de fato desatualizado.
+      const operatorToCancelCard = card(operatorPage, toCancel.requester_name)
+      await operatorToCancelCard.getByRole('button', { name: 'Concluir' }).click()
+      await expect(operatorToCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Fechar' }).click()
+      await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toHaveCount(0)
 
       await cancelThroughDialog(page, toCancelCard, 'Tentativa de cancelar pedido já concluído.')
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
