@@ -315,6 +315,79 @@ test.describe('Painel — gestão de status do pedido', () => {
     await expect(rescueCard).toContainText(reason)
   })
 
+  test('o campo do motivo do cancelamento mostra quantos caracteres já foram usados de 1000', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const name = `E2E Contador Motivo ${Date.now()}`
+    await createRescueRequest(request, { requester_name: name })
+
+    await page.goto('/painel')
+    await card(page, name).getByRole('button', { name: 'Cancelar' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText(/^\s*0\s*(\/|de)\s*1000\s*$/)).toBeVisible()
+
+    await page.getByLabel('Motivo do cancelamento').pressSequentially('Chuva forte')
+    await expect(dialog.getByText(/^\s*11\s*(\/|de)\s*1000\s*$/)).toBeVisible()
+  })
+
+  test('o campo do motivo do cancelamento não aceita mais de 1000 caracteres, digitados ou colados', async ({
+    page,
+    context,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL })
+    await loginAsAdminMaster()
+    const name = `E2E Limite Motivo ${Date.now()}`
+    await createRescueRequest(request, { requester_name: name })
+    const rescueCard = card(page, name)
+
+    await page.goto('/painel')
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+    const reasonField = page.getByLabel('Motivo do cancelamento')
+
+    // Digitado: com 999 caracteres no campo, só o próximo caractere digitado entra.
+    const typedPrefix = 'd'.repeat(999)
+    await reasonField.fill(typedPrefix)
+    await reasonField.pressSequentially('XY')
+    await expect(reasonField).toHaveValue(`${typedPrefix}X`)
+
+    // Colado: um texto de 1001 caracteres colado pela área de transferência para no 1000º.
+    const pastedReason = `Motivo colado ${Date.now()} `.padEnd(1000, 'c')
+    await reasonField.fill('')
+    await page.evaluate((text) => navigator.clipboard.writeText(text), `${pastedReason}Z`)
+    await reasonField.press('ControlOrMeta+V')
+    await expect(reasonField).toHaveValue(pastedReason)
+
+    await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(pastedReason)
+    await expect(rescueCard).not.toContainText(`${pastedReason}Z`)
+  })
+
+  test('motivo do cancelamento com exatamente 1000 caracteres é aceito e aparece completo no card', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const name = `E2E Motivo 1000 ${Date.now()}`
+    await createRescueRequest(request, { requester_name: name })
+    const rescueCard = card(page, name)
+    const reason = `Motivo com 1000 caracteres ${Date.now()} `.padEnd(1000, 'm')
+
+    await page.goto('/painel')
+    await cancelThroughDialog(page, rescueCard, reason)
+
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(reason)
+  })
+
   test('o painel não oferece nenhuma ação para excluir um pedido, em nenhum status', async ({
     page,
     request,

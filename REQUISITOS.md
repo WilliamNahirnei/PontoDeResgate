@@ -95,6 +95,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Qualquer operador autenticado ou o admin master vê a observação da conclusão no card do pedido concluído, no painel. Quando não foi informada, o card não exibe nenhuma linha de observação.
   - A pessoa em situação de risco (tela pública) nunca vê a observação, coerente com §3.3.
 - **Cancelar pedido**: altera o status para **"Cancelado"**; exige o preenchimento obrigatório do motivo do cancelamento.
+  - O motivo tem no máximo **1000 caracteres**.
+  - O campo do motivo mostra ao operador quantos caracteres já foram usados de 1000 e não aceita além disso: o texto digitado ou colado para no 1000º caractere.
+  - O sistema não registra motivo com mais de 1000 caracteres, mesmo que ele não tenha sido informado pela tela.
 - **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
 - **Compartilhar localização**: permite compartilhar a localização do pedido com um voluntário, para que ele vá ao local.
 - **Ações sobre um pedido já alterado por outro operador**: se o status do pedido mudou depois que o operador abriu a tela (por exemplo, um operador cancela enquanto outro conclui), assumir, concluir ou cancelar esse pedido falha. Ao concluir ou cancelar, o operador vê uma mensagem de erro informando que o pedido foi alterado por outro operador; ao assumir, vê a mensagem da regra de assumir acima. Em todos os casos, o painel atualiza o pedido com o status atual.

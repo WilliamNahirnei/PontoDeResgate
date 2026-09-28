@@ -25,7 +25,7 @@
 | §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — sessão aberta de operador desativado Não implementado (USR-61) | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80 |
 | §3 Tela pública de pedido | Resgates | E2E | Implementado | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125 |
 | §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161 |
-| §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — concorrência entre operadores (mensagem de erro, atualização do painel, nome não exposto, diálogo fechado) Não implementada, com testes já escritos e falhando (RES-118, RES-129, RES-154, RES-155, RES-162); observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155, RES-162 |
+| §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — concorrência entre operadores (mensagem de erro, atualização do painel, nome não exposto, diálogo fechado) Não implementada, com testes já escritos e falhando (RES-118, RES-129, RES-154, RES-155, RES-162); observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141); contador e limite de 1000 no campo do motivo do cancelamento Não implementados, com testes já escritos e falhando (RES-163, RES-164) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155, RES-162–RES-165 |
 | §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, CRZ-10, CRZ-11 |
 | §4.4 Consulta de logs de operações | Resgates + Usuarios | E2E | Parcial — observação da conclusão na entrada de log (RES-142–RES-144) Não implementada | RES-69, RES-120, RES-142–RES-144, CRZ-04, CRZ-06 |
 | §4.5 Cadastro e gestão de operadores | Usuarios | E2E | Implementado | USR-54–USR-57, USR-69, USR-72–USR-78 |
@@ -50,11 +50,11 @@
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 20 | 51 | 5 | 76 |
+| Implementado | 20 | 52 | 5 | 77 |
 | Planejado | 0 | 0 | 0 | 0 |
 | Não coberto | 0 | 0 | 0 | 0 |
-| Não implementado | 1 | 22 | 1 | 24 |
-| **Total de cenários** | **21** | **73** | **6** | **100** |
+| Não implementado | 1 | 24 | 1 | 26 |
+| **Total de cenários** | **21** | **76** | **6** | **103** |
 
 > Esta tabela é um retrato do momento em que o test plan foi escrito/atualizado pela
 > última vez — não é gerada automaticamente. Ao editar qualquer cenário em `usuarios.md`
@@ -67,4 +67,4 @@
 > os cinco foram reescritos e voltaram a `Implementado`. Ainda em 2026-09-24 os 46 cenários
 > `Não coberto` ganharam teste; 44 passam e 2 falham por bug (RES-125, RES-146), e por isso
 > continuam `Não coberto`. Em 2026-09-26 o bug do RES-125 foi corrigido e ele passou a
-> `Implementado`, e o do RES-146 também, junto com os novos RES-159 a RES-161.
+> `Implementado`, e o do RES-146 também, junto com os novos RES-159 a RES-161. Em 2026-09-28 entraram RES-163 a RES-165 (limite do motivo do cancelamento): RES-165 passa e está `Implementado`; RES-163 e RES-164 têm teste escrito antes da implementação, que falha até o campo impor o limite.
