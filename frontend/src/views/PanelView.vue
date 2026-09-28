@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import api from '@/services/api'
 import RescueRequestsMap from '@/components/RescueRequestsMap.vue'
 import RescueRequestsList from '@/components/RescueRequestsList.vue'
@@ -34,6 +34,11 @@ const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
 const shareFeedback = ref(false)
 const actionErrorMessage = ref('')
+// Ações de status em andamento, como chaves "<id do pedido>:<ação>".
+const actionsInProgress = ref([])
+const cancelInProgress = computed(
+  () => Boolean(cancelDialogRequest.value) && actionsInProgress.value.includes(actionKey(cancelDialogRequest.value.id, 'cancel')),
+)
 
 const DEFAULT_ACTION_ERROR_MESSAGE = 'Não foi possível alterar o pedido. Tente novamente.'
 
@@ -102,33 +107,50 @@ function handleSelect(id) {
   selectedId.value = id
 }
 
+function actionKey(rescueRequestId, action) {
+  return `${rescueRequestId}:${action}`
+}
+
 // Uma ação recusada porque outro operador alterou o pedido (409) mostra a
 // mensagem da API, fecha o diálogo aberto e recarrega a lista, para o card
 // passar a mostrar o status atual. Outras falhas mantêm o diálogo aberto,
 // para o operador não perder o motivo digitado e poder tentar de novo.
-async function runStatusAction(action) {
+//
+// Enquanto a ação está em andamento (até a lista recarregar), o botão acionado
+// fica indisponível e um segundo clique na mesma ação do mesmo pedido é
+// ignorado, em vez de ser enviado e recusado como se outro operador tivesse
+// alterado o pedido. A trava é por pedido e ação: as demais ações continuam
+// disponíveis.
+async function runStatusAction(rescueRequest, action, data) {
+  const key = actionKey(rescueRequest.id, action)
+  if (actionsInProgress.value.includes(key)) {
+    return
+  }
+  actionsInProgress.value = [...actionsInProgress.value, key]
   actionErrorMessage.value = ''
 
+  let shouldRefresh = true
   try {
-    await action()
+    await api.post(`/api/rescue-requests/${rescueRequest.id}/${action}`, data)
   } catch (error) {
     const isConflict = error.response?.status === 409
     actionErrorMessage.value = (isConflict && error.response.data?.message) || DEFAULT_ACTION_ERROR_MESSAGE
-    if (!isConflict) {
-      return
-    }
+    shouldRefresh = isConflict
   }
 
-  cancelDialogRequest.value = null
-  await fetchRescueRequests()
+  if (shouldRefresh) {
+    cancelDialogRequest.value = null
+    await fetchRescueRequests()
+  }
+  actionsInProgress.value = actionsInProgress.value.filter((inProgress) => inProgress !== key)
 }
 
 function handleAssume(rescueRequest) {
-  return runStatusAction(() => api.post(`/api/rescue-requests/${rescueRequest.id}/assume`))
+  return runStatusAction(rescueRequest, 'assume')
 }
 
 function handleComplete(rescueRequest) {
-  return runStatusAction(() => api.post(`/api/rescue-requests/${rescueRequest.id}/complete`))
+  return runStatusAction(rescueRequest, 'complete')
 }
 
 function openCancelDialog(rescueRequest) {
@@ -136,12 +158,7 @@ function openCancelDialog(rescueRequest) {
 }
 
 function handleCancelConfirm(reason) {
-  const rescueRequest = cancelDialogRequest.value
-  return runStatusAction(() =>
-    api.post(`/api/rescue-requests/${rescueRequest.id}/cancel`, {
-      cancellation_reason: reason,
-    }),
-  )
+  return runStatusAction(cancelDialogRequest.value, 'cancel', { cancellation_reason: reason })
 }
 
 function shareLocation(rescueRequest) {
@@ -234,6 +251,7 @@ onMounted(fetchRescueRequests)
         class="panel-list"
         :rescue-requests="rescueRequests"
         :selected-id="selectedId"
+        :actions-in-progress="actionsInProgress"
         @select="handleSelect"
         @assume="handleAssume"
         @complete="handleComplete"
@@ -244,6 +262,7 @@ onMounted(fetchRescueRequests)
 
     <CancelRescueRequestDialog
       :model-value="Boolean(cancelDialogRequest)"
+      :confirming="cancelInProgress"
       @update:model-value="(value) => { if (!value) cancelDialogRequest = null }"
       @confirm="handleCancelConfirm"
     />

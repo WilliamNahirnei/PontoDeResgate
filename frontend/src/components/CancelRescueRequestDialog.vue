@@ -6,6 +6,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // O cancelamento confirmado ainda está em andamento.
+  confirming: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['update:modelValue', 'confirm'])
@@ -22,7 +27,7 @@ watch(
 )
 
 function confirm() {
-  if (!reason.value.trim()) {
+  if (!reason.value.trim() || props.confirming) {
     return
   }
   emit('confirm', reason.value.trim())
@@ -51,7 +56,9 @@ function confirm() {
       <v-card-actions>
         <v-spacer />
         <v-btn variant="text" @click="emit('update:modelValue', false)">Voltar</v-btn>
-        <v-btn color="error" :disabled="!reason.trim()" @click="confirm">Confirmar cancelamento</v-btn>
+        <v-btn color="error" :disabled="!reason.trim() || confirming" :loading="confirming" @click="confirm">
+          Confirmar cancelamento
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

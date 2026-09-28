@@ -1,7 +1,7 @@
 <script setup>
 import { formatTotalPeople } from '@/utils/rescueRequestFormat'
 
-defineProps({
+const props = defineProps({
   rescueRequests: {
     type: Array,
     default: () => [],
@@ -9,6 +9,11 @@ defineProps({
   selectedId: {
     type: Number,
     default: null,
+  },
+  // Ações de status em andamento, como chaves "<id do pedido>:<ação>".
+  actionsInProgress: {
+    type: Array,
+    default: () => [],
   },
 })
 
@@ -34,6 +39,10 @@ const PEOPLE_CATEGORIES = [
   { field: 'children_count', label: 'Crianças' },
   { field: 'elderly_count', label: 'Idosos' },
 ]
+
+function isInProgress(rescueRequest, action) {
+  return props.actionsInProgress.includes(`${rescueRequest.id}:${action}`)
+}
 
 function formatDateTime(value) {
   return new Date(value).toLocaleString('pt-BR')
@@ -87,6 +96,8 @@ function peopleComposition(rescueRequest) {
           v-if="rescueRequest.status === 'pendente'"
           size="small"
           color="primary"
+          :disabled="isInProgress(rescueRequest, 'assume')"
+          :loading="isInProgress(rescueRequest, 'assume')"
           @click.stop="emit('assume', rescueRequest)"
         >
           Assumir
@@ -95,6 +106,8 @@ function peopleComposition(rescueRequest) {
           v-if="rescueRequest.status === 'em_resgate'"
           size="small"
           color="success"
+          :disabled="isInProgress(rescueRequest, 'complete')"
+          :loading="isInProgress(rescueRequest, 'complete')"
           @click.stop="emit('complete', rescueRequest)"
         >
           Concluir
