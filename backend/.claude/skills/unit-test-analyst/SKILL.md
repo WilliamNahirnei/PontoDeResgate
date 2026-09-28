@@ -1,5 +1,5 @@
 ---
-description: Atua como analista de testes e escreve testes unitários de backend (PHPUnit) para Repositories, Models, Form Requests e Services dentro de backend/Modules, seguindo as convenções reais já em uso no projeto (TestDox em português, LazilyRefreshDatabase, sem mocks desnecessários). Invoque manualmente com /unit-test-analyst, apontando a classe alvo, ou deixe o Claude acionar automaticamente ao criar/alterar código nessas camadas.
+description: Atua como analista de testes e escreve testes unitários de backend (PHPUnit) para Repositories, Models, Form Requests e Services dentro de backend/Modules, seguindo as convenções reais já em uso no projeto (TestDox em português, LazilyRefreshDatabase, sem mocks desnecessários). Sempre cobre mínimo, máximo e valores válidos de cada campo da requisição, tirados do REQUISITOS.md, e pergunta ao usuário durante a execução quando o requisito não define o limite. Invoque manualmente com /unit-test-analyst, apontando a classe alvo, ou deixe o Claude acionar automaticamente ao criar/alterar código nessas camadas.
 paths: "backend/Modules/**,backend/app/**"
 allowed-tools: Bash(docker compose exec backend php artisan test *) Bash(docker compose exec backend vendor/bin/phpunit *)
 ---
@@ -42,6 +42,8 @@ cada parâmetro/comportamento do método sob teste, verifique explicitamente:
 5. **Limites e valores extremos**: string vazia, zero, negativo, página além do total
    de resultados, tamanho de página no limite ou acima do limite configurado — inclua
    só os que fizerem sentido para a assinatura do método em questão, não gere ruído.
+   Para os campos de uma requisição (Form Request ou dados que chegam do request), os
+   limites **não são opcionais**: siga a seção "Limites da requisição" abaixo.
 6. **Efeitos colaterais além do retorno**: quando o método também deveria (ou não
    deveria) alterar o banco — soft delete, update em cascata, contagem de registros
    relacionados — teste o estado do banco depois da chamada, não só o valor retornado.
@@ -72,6 +74,65 @@ método com filtros/ordenação opcionais normalmente gera 4 ou mais testes, nun
 | `sortBy` = campo inexistente/não permitido | comportamento real do código (default, ignora, ou exceção — confirme lendo a implementação) |
 | mais registros que `perPage` | pagina corretamente (`total()`, `count()`, página seguinte) |
 
+## Limites da requisição: mínimo, máximo e valores válidos
+
+Sempre que o teste envolver uma requisição — o `rules()` de um Form Request ou um método
+que recebe dados vindos do request —, cubra **todos** os campos dela quanto a mínimo,
+máximo e valores válidos. Não é um item a escolher: cada campo da requisição sai do teste
+com os seus limites provados.
+
+### De onde vêm os limites
+
+1. **`REQUISITOS.md` (raiz do repositório) é a fonte de verdade.** Para cada campo, procure
+   na seção da funcionalidade e em §8 (entidades): obrigatório ou opcional, mínimo,
+   máximo, tamanho de texto, formato e valores permitidos (status, papéis).
+2. **Confronte com o código:** o `rules()` do Form Request e a coluna na migration (tipo,
+   tamanho, `nullable`, `unsigned`). O código serve para achar divergência, não para
+   decidir o limite.
+3. **Monte a tabela antes de escrever**, uma linha por campo: limite do requisito ×
+   limite do `rules()` × limite da coluna. Exemplo (`StoreRescueRequestRequest`):
+
+   | Campo | Requisito | `rules()` | Coluna |
+   |---|---|---|---|
+   | `total_people` | opcional, inteiro de 0 a 999 | `nullable`, `integer`, `min:0`, `max:999` | `unsignedInteger`, `nullable` |
+   | `requester_name` | opcional, até 255 caracteres | `nullable`, `string`, `max:255` | `string` (255), `nullable` |
+
+### Cenários obrigatórios por campo
+
+- **Número:** o mínimo é aceito; um abaixo do mínimo é recusado; o máximo é aceito; um
+  acima do máximo é recusado; decimal num campo inteiro é recusado.
+- **Texto:** o tamanho máximo é aceito; um caractere a mais é recusado.
+- **Valores permitidos (enum, lista fechada):** cada valor válido é aceito; um valor fora
+  da lista é recusado.
+- **Obrigatório × opcional:** o campo obrigatório ausente é recusado; o opcional ausente
+  ou `null` é aceito.
+- **Valor maior que a coluna do banco comporta** (ex.: acima de 4.294.967.295 num
+  `unsignedInteger`): tem de ser recusado na validação, nunca chegar ao banco e virar
+  erro 500.
+
+Quando o mesmo limite vale para vários campos (as seis quantidades de um pedido, por
+exemplo), use `#[DataProvider]` com um caso por campo, para a falha apontar qual campo
+ficou sem limite. Nas recusas, confirme que o erro aponta o campo certo
+(`assertArrayHasKey($campo, $validator->errors()->toArray())`), não só que a validação
+falhou.
+
+### Quando o requisito não diz — pergunte durante a execução
+
+Não invente limite nem copie o do código em silêncio. Pare e pergunte ao usuário com
+`AskUserQuestion`, em uma rodada só com todos os campos pendentes (até 4 perguntas), com
+a sua recomendação como primeira opção:
+
+| Situação | O que fazer |
+|---|---|
+| O requisito define o limite e o código segue | Escreva os testes; eles passam. |
+| O requisito define o limite e o código diverge ou não tem | Escreva o teste pelo **requisito**; ele falha até a correção. Avise o usuário da divergência. Não ajuste o teste ao código. |
+| O requisito não define, mas o código ou a coluna têm limite | Pergunte se o limite do código é a regra (recomende o da coluna do banco quando fizer sentido). |
+| Nem o requisito nem o código definem | Pergunte qual é o limite; sem resposta, não escreva o teste desse campo e registre a lacuna no relatório. |
+
+A resposta vale para o teste. Você **não** edita o `REQUISITOS.md`: ao final, liste os
+limites decididos na conversa e recomende registrá-los com a skill `po-requisitos`, para o
+requisito continuar sendo a fonte de verdade.
+
 ## Rastreando o valor entre camadas (para métodos que gravam dados)
 
 Um valor gravado não nasce no Repository — ele passa por Form Request, Controller,
@@ -81,9 +142,10 @@ ou bloquear a gravação. Antes de escrever testes para um método que grava dad
 — não assuma, e não invente regra que o código não tem:
 
 1. **Vem direto do input validado?** Olhe o `rules()` do Form Request correspondente —
-   ele já define o formato/tipo/limite esperado daquele campo (`min:0`, `max:255`,
-   `email`, `Rule::enum(...)`, `Rule::in(...)`). Use esses limites como fonte dos
-   valores de teste; não invente um limite que o código não impõe.
+   ele mostra o formato/tipo/limite que o código impõe hoje àquele campo (`min:0`,
+   `max:255`, `email`, `Rule::enum(...)`, `Rule::in(...)`). A fonte dos limites é o
+   `REQUISITOS.md`, não o `rules()`: siga a seção "Limites da requisição" acima e trate
+   uma diferença entre os dois como divergência a reportar.
 2. **É derivado ou fixado no Service?** Procure, antes da chamada ao Repository, por
    valores que nunca vêm do request — ex.: um status fixo atribuído na criação, um
    campo lido do estado atual do registro (como um "status anterior" antes de mudar
