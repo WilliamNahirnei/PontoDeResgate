@@ -16,11 +16,28 @@ const form = reactive({
   reference_point: '',
 })
 
+const MAX_QUANTITY = 999
+const INVALID_QUANTITY_MESSAGE = `Informe um número inteiro de 0 a ${MAX_QUANTITY}`
+
+// Campo em branco é quantidade não informada; preenchido, precisa ser inteiro de 0 a 999.
+const quantityRules = [
+  (value) =>
+    value === '' ||
+    value === null ||
+    (Number.isInteger(value) && value >= 0 && value <= MAX_QUANTITY) ||
+    INVALID_QUANTITY_MESSAGE,
+]
+
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMessage = ref('')
 
-async function handleSubmit() {
+async function handleSubmit(submitEvent) {
+  const { valid } = await submitEvent
+  if (!valid) {
+    return
+  }
+
   if (!location.value) {
     errorMessage.value = 'Selecione a localização no mapa antes de enviar.'
     return
@@ -91,30 +108,87 @@ function handleNewRequest() {
         Localização selecionada: {{ location.lat.toFixed(5) }}, {{ location.lng.toFixed(5) }}
       </p>
 
-      <v-text-field v-model="form.requester_name" label="Nome (opcional)" class="mb-2" />
+      <v-text-field
+        v-model="form.requester_name"
+        label="Nome (opcional)"
+        counter="255"
+        persistent-counter
+        maxlength="255"
+        class="mb-2"
+      />
 
       <v-row dense>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.total_people" type="number" min="0" label="Total de pessoas" />
+          <v-text-field
+            v-model.number="form.total_people"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Total de pessoas"
+          />
         </v-col>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.men_count" type="number" min="0" label="Homens" />
+          <v-text-field
+            v-model.number="form.men_count"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Homens"
+          />
         </v-col>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.women_count" type="number" min="0" label="Mulheres" />
+          <v-text-field
+            v-model.number="form.women_count"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Mulheres"
+          />
         </v-col>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.children_count" type="number" min="0" label="Crianças" />
+          <v-text-field
+            v-model.number="form.children_count"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Crianças"
+          />
         </v-col>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.elderly_count" type="number" min="0" label="Idosos" />
+          <v-text-field
+            v-model.number="form.elderly_count"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Idosos"
+          />
         </v-col>
         <v-col cols="6" sm="4">
-          <v-text-field v-model.number="form.animals_count" type="number" min="0" label="Animais" />
+          <v-text-field
+            v-model.number="form.animals_count"
+            type="number"
+            min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
+            label="Animais"
+          />
         </v-col>
       </v-row>
 
-      <v-textarea v-model="form.reference_point" label="Ponto de referência (opcional)" rows="2" class="mb-2" />
+      <v-textarea
+        v-model="form.reference_point"
+        label="Ponto de referência (opcional)"
+        rows="2"
+        counter="1000"
+        persistent-counter
+        maxlength="1000"
+        class="mb-2"
+      />
 
       <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
         {{ errorMessage }}

@@ -23,12 +23,12 @@ class StoreRescueRequestRequest extends FormRequest
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'requester_name' => ['nullable', 'string', 'max:255'],
-            'total_people' => ['nullable', 'integer', 'min:0'],
-            'men_count' => ['nullable', 'integer', 'min:0'],
-            'women_count' => ['nullable', 'integer', 'min:0'],
-            'children_count' => ['nullable', 'integer', 'min:0'],
-            'elderly_count' => ['nullable', 'integer', 'min:0'],
-            'animals_count' => ['nullable', 'integer', 'min:0'],
+            'total_people' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'men_count' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'women_count' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'children_count' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'elderly_count' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'animals_count' => ['nullable', 'integer', 'min:0', 'max:999'],
             'reference_point' => ['nullable', 'string', 'max:1000'],
         ];
     }

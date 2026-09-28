@@ -23,7 +23,7 @@
 | Requisito (`REQUISITOS.md`) | Módulo(s) | Camadas | Status geral | Cenários |
 |---|---|---|---|---|
 | §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — sessão aberta de operador desativado Não implementado (USR-61) | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80 |
-| §3 Tela pública de pedido | Resgates | E2E | Parcial — limites dos campos (mensagem no campo para quantidade inválida, contador e corte nos textos) Não implementados, com testes já escritos e falhando (RES-173–RES-176, RES-178, RES-179) | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125, RES-172–RES-181 |
+| §3 Tela pública de pedido | Resgates | E2E | Implementado | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125, RES-172–RES-181 |
 | §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161 |
 | §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155, RES-162–RES-168, RES-170, RES-171 |
 | §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, RES-169, CRZ-10, CRZ-11 |
@@ -50,10 +50,10 @@
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 20 | 69 | 5 | 94 |
+| Implementado | 20 | 75 | 5 | 100 |
 | Planejado | 0 | 0 | 0 | 0 |
 | Não coberto | 0 | 0 | 0 | 0 |
-| Não implementado | 1 | 23 | 1 | 25 |
+| Não implementado | 1 | 17 | 1 | 19 |
 | **Total de cenários** | **21** | **92** | **6** | **119** |
 
 > Esta tabela é um retrato do momento em que o test plan foi escrito/atualizado pela
@@ -67,4 +67,4 @@
 > os cinco foram reescritos e voltaram a `Implementado`. Ainda em 2026-09-24 os 46 cenários
 > `Não coberto` ganharam teste; 44 passam e 2 falham por bug (RES-125, RES-146), e por isso
 > continuam `Não coberto`. Em 2026-09-26 o bug do RES-125 foi corrigido e ele passou a
-> `Implementado`, e o do RES-146 também, junto com os novos RES-159 a RES-161. Em 2026-09-28 entraram RES-163 a RES-165 (limite do motivo do cancelamento): RES-165 passa e está `Implementado`; RES-163 e RES-164 tinham teste escrito antes da implementação. Ainda em 2026-09-28 a correção do achado M2 levou a `Implementado` RES-118, RES-129, RES-154, RES-155, RES-162, RES-163 e RES-164, com a suíte E2E completa passando (86 testes). Ainda em 2026-09-28 entraram RES-166 a RES-171 (ação em andamento e duplo clique, achado M1): RES-169 fica `Planejado`, porque a recusa da segunda tentativa já existe; os demais ficam `Não implementado` até o botão ficar indisponível durante a ação. No mesmo dia os seis ganharam teste: RES-169 passa e está `Implementado`; os de RES-166 a RES-168, RES-170 e RES-171 foram escritos antes da implementação e, ainda em 2026-09-28, a correção do achado M1 os levou a `Implementado`, com a suíte E2E completa passando (92 testes). Ainda em 2026-09-28 entraram RES-172 a RES-181 (limites dos campos do formulário público, achado M3): os que só afirmam a faixa válida ficam `Planejado` (RES-172, RES-177, RES-180, RES-181), porque a tela já aceita esses valores; os demais ficam `Não implementado`. No mesmo dia os dez ganharam teste: RES-172, RES-177, RES-180 e RES-181 passam e estão `Implementado`; os de RES-173 a RES-176, RES-178 e RES-179 foram escritos antes da implementação e falham até a correção.
+> `Implementado`, e o do RES-146 também, junto com os novos RES-159 a RES-161. Em 2026-09-28 entraram RES-163 a RES-165 (limite do motivo do cancelamento): RES-165 passa e está `Implementado`; RES-163 e RES-164 tinham teste escrito antes da implementação. Ainda em 2026-09-28 a correção do achado M2 levou a `Implementado` RES-118, RES-129, RES-154, RES-155, RES-162, RES-163 e RES-164, com a suíte E2E completa passando (86 testes). Ainda em 2026-09-28 entraram RES-166 a RES-171 (ação em andamento e duplo clique, achado M1): RES-169 fica `Planejado`, porque a recusa da segunda tentativa já existe; os demais ficam `Não implementado` até o botão ficar indisponível durante a ação. No mesmo dia os seis ganharam teste: RES-169 passa e está `Implementado`; os de RES-166 a RES-168, RES-170 e RES-171 foram escritos antes da implementação e, ainda em 2026-09-28, a correção do achado M1 os levou a `Implementado`, com a suíte E2E completa passando (92 testes). Ainda em 2026-09-28 entraram RES-172 a RES-181 (limites dos campos do formulário público, achado M3): os que só afirmam a faixa válida ficam `Planejado` (RES-172, RES-177, RES-180, RES-181), porque a tela já aceita esses valores; os demais ficam `Não implementado`. No mesmo dia os dez ganharam teste: RES-172, RES-177, RES-180 e RES-181 passam e estão `Implementado`; os de RES-173 a RES-176, RES-178 e RES-179 foram escritos antes da implementação e, ainda em 2026-09-28, a correção do achado M3 os levou a `Implementado`, com a suíte E2E completa passando (102 testes).
