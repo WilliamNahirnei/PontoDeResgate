@@ -39,11 +39,19 @@ A tela pública deve conter **somente** informações relacionadas a solicitar u
 - O pin de localização pode ser ajustado manualmente pela pessoa após a seleção inicial (automática ou não).
 
 ### 3.2 Formulário de pedido (todos os campos opcionais, exceto a localização)
-- Nome da pessoa solicitante.
+- Nome da pessoa solicitante — até **255 caracteres**.
 - Quantidade total de pessoas no local.
 - Quantidade de pessoas por categoria: homens, mulheres, crianças, idosos.
 - Quantidade de animais.
-- Ponto de referência textual, complementar à localização marcada no mapa.
+- Ponto de referência textual, complementar à localização marcada no mapa — até **1000 caracteres**.
+
+#### Limites dos campos
+- Cada quantidade (total de pessoas, homens, mulheres, crianças, idosos e animais), quando informada, é um número inteiro de **0 a 999**.
+- Uma quantidade deixada em branco é tratada como não informada; zero é um valor informado.
+- Quando a pessoa informa uma quantidade inválida (acima de 999, negativa ou com casas decimais), o próprio campo mostra a mensagem "Informe um número inteiro de 0 a 999", e o pedido não é enviado até que ela corrija o valor ou apague o campo.
+- Os campos de nome e de ponto de referência mostram quantos caracteres já foram usados do limite e não aceitam além disso: o texto digitado ou colado para no último caractere permitido.
+- O total de pessoas não precisa coincidir com a soma das categorias: qualquer combinação de quantidades válidas é aceita.
+- O sistema não registra pedido com nome, quantidade ou ponto de referência fora desses limites, mesmo que ele não tenha sido enviado pela tela.
 
 ### 3.3 Regras de negócio
 - Ao ser enviado, o pedido é persistido como um registro de `rescue_request` com status inicial **"Pendente"**.
@@ -147,6 +155,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 - Área autenticada para os próprios resgatistas em campo atualizarem o status dos resgates diretamente. Está prevista como evolução futura, não faz parte do MVP.
 - Editar, incluir ou apagar a observação de um pedido depois de concluído; observação nas ações de assumir e cancelar; exibir a observação no hover do mapa. Fora do escopo por decisão do PO: a observação é definida uma única vez, junto com a conclusão, e só é consultada no card e no log.
+- Conferir se o total de pessoas é coerente com a soma das categorias (homens, mulheres, crianças, idosos). Fora do escopo por decisão do PO: em uma emergência, a pessoa pode conhecer só parte das categorias ou estimar o total.
 
 ## 7. Status de um pedido (`rescue_request`)
 
@@ -163,11 +172,11 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 ### `rescue_request`
 - Localização (coordenadas de mapa).
-- Nome (opcional).
-- Quantidade total de pessoas (opcional).
-- Quantidade de homens/mulheres/crianças/idosos (opcional).
-- Quantidade de animais (opcional).
-- Ponto de referência textual (opcional).
+- Nome (opcional, até 255 caracteres).
+- Quantidade total de pessoas (opcional, inteiro de 0 a 999).
+- Quantidade de homens/mulheres/crianças/idosos (opcional, inteiro de 0 a 999 cada).
+- Quantidade de animais (opcional, inteiro de 0 a 999).
+- Ponto de referência textual (opcional, até 1000 caracteres).
 - Status (Pendente, Em resgate, Concluído, Cancelado).
 - Motivo do cancelamento (obrigatório apenas quando o status é Cancelado).
 - Observação da conclusão (opcional, até 1000 caracteres; só existe quando o status é Concluído).
