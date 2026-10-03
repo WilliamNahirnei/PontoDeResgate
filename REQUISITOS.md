@@ -97,6 +97,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais.
   - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima e a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo.
 - Com um filtro de quantidade mínima aplicado, só aparecem os pedidos em que essa quantidade foi informada e é igual ou maior que o mínimo; os pedidos em que ela não foi informada (campos opcionais no formulário público) não aparecem no mapa nem na lista.
+- Cada quantidade mínima, quando informada, é um número inteiro de **0 a 999**; deixada em branco, não filtra.
+- Quando o operador ou o admin master informa uma quantidade mínima inválida (acima de 999, negativa ou com casas decimais), o próprio campo mostra a mensagem "Informe um número inteiro de 0 a 999", e o painel não mostra a mensagem de erro de carregamento dos pedidos.
+- Enquanto houver uma quantidade mínima inválida, o mapa e a lista continuam mostrando os pedidos como estavam antes do valor inválido; ao corrigir o valor ou apagar o campo, o filtro volta a ser aplicado.
 - Os filtros aplicados ao mesmo tempo valem em conjunto: o pedido só aparece se atender a todos.
 - **Ordenação**: a lista pode ser ordenada pela data/hora do pedido ou por uma das quantidades (total, homens, mulheres, crianças, idosos, animais), em ordem crescente ou decrescente.
 - Ao abrir o painel, a lista vem ordenada pela data/hora do pedido, do mais recente para o mais antigo.

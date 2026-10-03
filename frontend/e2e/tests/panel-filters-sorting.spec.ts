@@ -20,6 +20,26 @@ async function listPositions(page, names: string[]) {
   return names.map((name) => text.indexOf(name))
 }
 
+const INVALID_QUANTITY_MESSAGE = 'Informe um número inteiro de 0 a 999'
+const LOAD_ERROR_MESSAGE = 'Não foi possível carregar os pedidos.'
+const MIN_QUANTITY_LABELS = [
+  'Mín. total de pessoas',
+  'Mín. homens',
+  'Mín. mulheres',
+  'Mín. crianças',
+  'Mín. idosos',
+  'Mín. animais',
+]
+
+// Dá ao painel a chance de buscar os pedidos com o filtro digitado (a busca
+// espera o operador parar de digitar). Com um valor inválido a busca não deve
+// acontecer, então a espera termina sem resposta — e é isso que se quer provar.
+async function settleQuantityFilter(page) {
+  await page
+    .waitForResponse((response) => response.url().includes('/api/rescue-requests?'), { timeout: 2000 })
+    .catch(() => null)
+}
+
 // A data/hora do pedido tem resolução de segundos: para dois pedidos terem
 // horários diferentes, o segundo precisa ser criado no segundo seguinte.
 async function waitForNextSecond() {
@@ -393,5 +413,143 @@ test.describe('Painel — filtros e ordenação', () => {
     const positionAfter = await stableBoundingBox(marker)
     expect(positionAfter.x).toBeCloseTo(positionBefore.x, 0)
     expect(positionAfter.y).toBeCloseTo(positionBefore.y, 0)
+  })
+
+  test('quantidades mínimas nos extremos da faixa (0 e 999) são aceitas e filtram a lista', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const zeroName = `E2E Filtro Minimo Zero ${unique}`
+    const maxName = `E2E Filtro Minimo 999 ${unique}`
+    await createRescueRequest(request, { requester_name: zeroName, total_people: 0 })
+    await createRescueRequest(request, { requester_name: maxName, total_people: 999 })
+
+    await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    const field = page.getByLabel('Mín. total de pessoas')
+
+    await field.fill('0')
+    await expect(card(page, zeroName)).toBeVisible()
+    await expect(field).not.toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+
+    await field.fill('999')
+    await expect(card(page, zeroName)).toHaveCount(0)
+    await expect(card(page, maxName)).toBeVisible()
+    await expect(field).not.toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await expect(page.getByText(LOAD_ERROR_MESSAGE)).toHaveCount(0)
+  })
+
+  test('quantidade mínima acima de 999 em qualquer campo mostra a mensagem no próprio campo, sem o alerta de carregamento', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+
+    for (const label of MIN_QUANTITY_LABELS) {
+      const field = page.getByLabel(label)
+      await field.fill('1000')
+      await expect(field, label).toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+      await field.fill('')
+    }
+
+    await page.getByLabel('Mín. total de pessoas').fill('1000')
+    await settleQuantityFilter(page)
+    await expect(page.getByText(LOAD_ERROR_MESSAGE)).toHaveCount(0)
+  })
+
+  test('quantidade mínima negativa mostra a mensagem no próprio campo, sem o alerta de carregamento', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    const field = page.getByLabel('Mín. total de pessoas')
+
+    await field.fill('-1')
+    await settleQuantityFilter(page)
+
+    await expect(field).toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await expect(page.getByText(LOAD_ERROR_MESSAGE)).toHaveCount(0)
+  })
+
+  test('quantidade mínima com casas decimais mostra a mensagem no próprio campo, sem o alerta de carregamento', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    const field = page.getByLabel('Mín. total de pessoas')
+
+    await field.fill('1.5')
+    await settleQuantityFilter(page)
+
+    await expect(field).toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await expect(page.getByText(LOAD_ERROR_MESSAGE)).toHaveCount(0)
+  })
+
+  test('enquanto a quantidade mínima é inválida, o mapa e a lista continuam como estavam', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, {
+      requester_name: `E2E Filtro Invalido Mantem ${Date.now()}`,
+      total_people: 5,
+    })
+
+    await page.goto('/painel')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    const marker = page.getByTestId(`rescue-request-marker-${rescueRequest.id}`)
+    await expect(rescueCard).toBeVisible()
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+
+    // Acima de 999 hoje filtra a lista (some tudo); negativo hoje troca a lista
+    // pelo alerta de erro. Nos dois casos a lista deve continuar como estava.
+    for (const value of ['1000', '-1']) {
+      await page.getByLabel('Mín. total de pessoas').fill(value)
+      await settleQuantityFilter(page)
+
+      await expect(rescueCard, value).toBeVisible()
+      await expect(marker, value).toBeVisible()
+    }
+  })
+
+  test('ao corrigir a quantidade mínima inválida ou apagar o campo, a mensagem some e o filtro volta a ser aplicado', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const smallName = `E2E Filtro Corrigido Baixa ${unique}`
+    const bigName = `E2E Filtro Corrigido Alta ${unique}`
+    await createRescueRequest(request, { requester_name: smallName, total_people: 2 })
+    await createRescueRequest(request, { requester_name: bigName, total_people: 20 })
+
+    await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    const field = page.getByLabel('Mín. total de pessoas')
+
+    await field.fill('-1')
+    await expect(field).toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await field.fill('10')
+    await expect(field).not.toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await expect(card(page, smallName)).toHaveCount(0)
+    await expect(card(page, bigName)).toBeVisible()
+
+    await field.fill('1.5')
+    await expect(field).toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await field.fill('')
+    await expect(field).not.toHaveAccessibleDescription(INVALID_QUANTITY_MESSAGE)
+    await expect(card(page, smallName)).toBeVisible()
+    await expect(card(page, bigName)).toBeVisible()
   })
 })

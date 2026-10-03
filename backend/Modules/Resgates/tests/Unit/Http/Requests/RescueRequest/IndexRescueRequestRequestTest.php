@@ -4,6 +4,7 @@ namespace Modules\Resgates\Tests\Unit\Http\Requests\RescueRequest;
 
 use Illuminate\Support\Facades\Validator;
 use Modules\Resgates\Http\Requests\RescueRequest\IndexRescueRequestRequest;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestDox;
 use Tests\TestCase;
 
@@ -97,15 +98,66 @@ class IndexRescueRequestRequestTest extends TestCase
         $this->assertArrayNotHasKey('sort_direction', $descending->errors()->toArray());
     }
 
-    #[TestDox('A validação deve rejeitar um filtro de quantidade mínima negativo.')]
-    public function test_min_quantity_filters_must_not_be_negative(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function minQuantityFields(): array
     {
-        $validator = Validator::make(
-            ['min_total_people' => -1],
-            (new IndexRescueRequestRequest)->rules()
-        );
+        return [
+            'total de pessoas' => ['min_total_people'],
+            'homens' => ['min_men_count'],
+            'mulheres' => ['min_women_count'],
+            'crianças' => ['min_children_count'],
+            'idosos' => ['min_elderly_count'],
+            'animais' => ['min_animals_count'],
+        ];
+    }
+
+    #[DataProvider('minQuantityFields')]
+    #[TestDox('A validação deve rejeitar um filtro de quantidade mínima negativo.')]
+    public function test_min_quantity_filters_must_not_be_negative(string $field): void
+    {
+        $validator = Validator::make([$field => -1], (new IndexRescueRequestRequest)->rules());
 
         $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('min_total_people', $validator->errors()->toArray());
+        $this->assertArrayHasKey($field, $validator->errors()->toArray());
+    }
+
+    #[DataProvider('minQuantityFields')]
+    #[TestDox('A validação deve aceitar 0 como filtro de quantidade mínima.')]
+    public function test_min_quantity_filters_accept_zero(string $field): void
+    {
+        $validator = Validator::make([$field => 0], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertFalse($validator->fails());
+    }
+
+    #[DataProvider('minQuantityFields')]
+    #[TestDox('A validação deve aceitar 999 como filtro de quantidade mínima.')]
+    public function test_min_quantity_filters_accept_999(string $field): void
+    {
+        $validator = Validator::make([$field => 999], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertFalse($validator->fails());
+    }
+
+    #[DataProvider('minQuantityFields')]
+    #[TestDox('A validação deve rejeitar um filtro de quantidade mínima acima de 999.')]
+    public function test_min_quantity_filters_must_not_exceed_999(string $field): void
+    {
+        $validator = Validator::make([$field => 1000], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey($field, $validator->errors()->toArray());
+    }
+
+    #[DataProvider('minQuantityFields')]
+    #[TestDox('A validação deve rejeitar um filtro de quantidade mínima com casas decimais.')]
+    public function test_min_quantity_filters_must_be_integers(string $field): void
+    {
+        $validator = Validator::make([$field => 1.5], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey($field, $validator->errors()->toArray());
     }
 }
