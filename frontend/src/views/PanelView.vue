@@ -33,6 +33,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
 const shareFeedback = ref(false)
+// Link mostrado para cópia manual quando a cópia automática falha.
+const manualShareUrl = ref('')
 const actionErrorMessage = ref('')
 // Ações de status em andamento, como chaves "<id do pedido>:<ação>".
 const actionsInProgress = ref([])
@@ -164,19 +166,20 @@ function handleCancelConfirm(reason) {
 function shareLocation(rescueRequest) {
   const url = `https://www.google.com/maps?q=${rescueRequest.latitude},${rescueRequest.longitude}`
 
-  if (navigator.share) {
-    navigator.share({ title: 'Localização do pedido de resgate', url }).catch(() => {})
+  // Sem HTTPS o navegador não oferece a área de transferência.
+  if (!navigator.clipboard) {
+    manualShareUrl.value = url
     return
   }
 
-  if (navigator.clipboard) {
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        shareFeedback.value = true
-      })
-      .catch(() => {})
-  }
+  navigator.clipboard
+    .writeText(url)
+    .then(() => {
+      shareFeedback.value = true
+    })
+    .catch(() => {
+      manualShareUrl.value = url
+    })
 }
 
 onMounted(fetchRescueRequests)
@@ -284,10 +287,33 @@ onMounted(fetchRescueRequests)
     <v-snackbar v-model="shareFeedback" timeout="2500">
       Localização copiada para a área de transferência.
     </v-snackbar>
+
+    <v-dialog
+      :model-value="Boolean(manualShareUrl)"
+      max-width="480"
+      @update:model-value="(value) => { if (!value) manualShareUrl = '' }"
+    >
+      <v-card>
+        <v-card-title>Compartilhar localização</v-card-title>
+        <v-card-text>
+          <p class="mb-3">A localização não pôde ser copiada automaticamente. Copie o link abaixo:</p>
+          <a :href="manualShareUrl" target="_blank" rel="noopener" class="manual-share-url">{{ manualShareUrl }}</a>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="manualShareUrl = ''">Fechar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <style scoped>
+.manual-share-url {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 .panel-page {
   display: flex;
   flex-direction: column;
