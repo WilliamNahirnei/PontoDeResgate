@@ -38,6 +38,13 @@ const router = createRouter({
       component: () => import('../views/RescueStatusLogsView.vue'),
       meta: { requiresAuth: true, requiresAdminMaster: true },
     },
+    {
+      // Endereço inexistente: leva ao painel quem tem sessão e à tela pública
+      // quem não tem — sem passar pelo login, para não indicar que um endereço
+      // dentro de /painel pertence à área do operador.
+      path: '/:pathMatch(.*)*',
+      redirect: () => (useAuthStore().isAuthenticated ? { name: 'panel' } : { name: 'public-request' }),
+    },
   ],
 })
 
