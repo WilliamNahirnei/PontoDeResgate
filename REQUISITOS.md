@@ -106,8 +106,11 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - O motivo tem no máximo **1000 caracteres**.
   - O campo do motivo mostra ao operador quantos caracteres já foram usados de 1000 e não aceita além disso: o texto digitado ou colado para no 1000º caractere.
   - O sistema não registra motivo com mais de 1000 caracteres, mesmo que ele não tenha sido informado pela tela.
-- **Compartilhar localização**: ao clicar, os dados da localização são copiados para a área de transferência e uma confirmação visual é exibida informando que a cópia foi feita.
-- **Compartilhar localização**: permite compartilhar a localização do pedido com um voluntário, para que ele vá ao local.
+- **Compartilhar localização**: o operador ou o admin master repassa a localização do pedido a um voluntário, para que ele vá ao local. A ação aparece no card do pedido em qualquer status.
+  - Ao clicar, um link que abre o local do pedido num mapa, a partir das coordenadas do pedido, é copiado para a área de transferência, e uma confirmação visual informa que a localização foi copiada.
+  - A ação sempre copia o link: ela não abre o menu de compartilhamento do dispositivo.
+  - Quando não é possível copiar o link, um diálogo informa que a localização não pôde ser copiada automaticamente e mostra o link em texto selecionável, para que o operador ou o admin master o copie manualmente. Nesse caso, a confirmação de cópia não aparece.
+  - O diálogo só é fechado pelo operador ou pelo admin master e não altera o pedido.
 - **Ações sobre um pedido já alterado por outro operador**: se o status do pedido mudou depois que o operador abriu a tela (por exemplo, um operador cancela enquanto outro conclui), assumir, concluir ou cancelar esse pedido falha. Ao concluir ou cancelar, o operador vê uma mensagem de erro informando que o pedido foi alterado por outro operador; ao assumir, vê a mensagem da regra de assumir acima. Em todos os casos, o painel atualiza o pedido com o status atual.
   - Uma ação que falha não altera o pedido e não gera entrada no log de operações (§4.3).
   - Se o diálogo de conclusão ou de cancelamento estiver aberto, ele é fechado junto com a mensagem de erro.
@@ -156,6 +159,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Área autenticada para os próprios resgatistas em campo atualizarem o status dos resgates diretamente. Está prevista como evolução futura, não faz parte do MVP.
 - Editar, incluir ou apagar a observação de um pedido depois de concluído; observação nas ações de assumir e cancelar; exibir a observação no hover do mapa. Fora do escopo por decisão do PO: a observação é definida uma única vez, junto com a conclusão, e só é consultada no card e no log.
 - Conferir se o total de pessoas é coerente com a soma das categorias (homens, mulheres, crianças, idosos). Fora do escopo por decisão do PO: em uma emergência, a pessoa pode conhecer só parte das categorias ou estimar o total.
+- Compartilhar a localização pelo menu de compartilhamento do dispositivo (por exemplo, no celular). Fora do escopo por decisão do PO: a ação "Compartilhar localização" sempre copia o link da localização.
 
 ## 7. Status de um pedido (`rescue_request`)
 

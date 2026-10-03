@@ -30,6 +30,13 @@ const CHANGED_BY_ANOTHER_OPERATOR_MESSAGE = /alterado por outro operador/i
 // Qualquer mensagem de erro que o painel mostra quando uma ação de status falha.
 const STATUS_ACTION_ERROR_MESSAGE = /não está mais pendente|alterado por outro operador|não foi possível alterar o pedido/i
 
+const SHARE_FAILED_MESSAGE = /não pôde ser copiada automaticamente/i
+
+// Reproduz o HTTP puro, em que o navegador não oferece a área de transferência.
+function removeClipboard() {
+  Object.defineProperty(window.navigator, 'clipboard', { value: undefined, configurable: true })
+}
+
 // Abre o painel do operador A num segundo contexto de navegador: a disputa só
 // existe com duas sessões, cada uma com a própria tela carregada.
 async function openPanelAsAnotherOperator(browser, request) {
@@ -177,11 +184,15 @@ test.describe('Painel — gestão de status do pedido', () => {
     await expect(card).toContainText(reason)
   })
 
-  test('compartilhar localização usa o compartilhamento nativo do dispositivo quando ele está disponível', async ({
+  test('compartilhar localização copia o link mesmo com o menu de compartilhamento do dispositivo disponível', async ({
     page,
     request,
+    context,
     loginAsAdminMaster,
   }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL })
+    // Simula um dispositivo com menu de compartilhamento e registra as chamadas,
+    // para provar que a ação não o usa.
     await page.addInitScript(() => {
       window.__sharedData = []
       Object.defineProperty(window.navigator, 'share', {
@@ -199,11 +210,102 @@ test.describe('Painel — gestão de status do pedido', () => {
     await page.goto('/painel')
     await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Compartilhar localização' }).click()
 
-    await expect.poll(() => page.evaluate(() => window.__sharedData.length)).toBe(1)
-    const shared = await page.evaluate(() => window.__sharedData[0])
-    expect(shared.url).toContain(String(rescueRequest.latitude))
-    expect(shared.url).toContain(String(rescueRequest.longitude))
+    await expect(page.getByText('Localização copiada para a área de transferência.')).toBeVisible()
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
+    expect(clipboardText).toContain(String(rescueRequest.latitude))
+    expect(clipboardText).toContain(String(rescueRequest.longitude))
+    expect(await page.evaluate(() => window.__sharedData.length)).toBe(0)
+  })
+
+  test('sem acesso à área de transferência, compartilhar localização mostra um diálogo com o link para copiar manualmente', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await page.addInitScript(removeClipboard)
+
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Compartilhar Sem Clipboard ${Date.now()}` })
+
+    await page.goto('/painel')
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Compartilhar localização' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText(SHARE_FAILED_MESSAGE)
+    await expect(dialog).toContainText(`${rescueRequest.latitude},${rescueRequest.longitude}`)
     await expect(page.getByText('Localização copiada para a área de transferência.')).toHaveCount(0)
+  })
+
+  test('quando o navegador recusa a cópia, compartilhar localização mostra o diálogo com o link para copiar manualmente', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: {
+          writeText: () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError')),
+        },
+        configurable: true,
+      })
+    })
+
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Compartilhar Recusado ${Date.now()}` })
+
+    await page.goto('/painel')
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Compartilhar localização' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText(SHARE_FAILED_MESSAGE)
+    await expect(dialog).toContainText(`${rescueRequest.latitude},${rescueRequest.longitude}`)
+    await expect(page.getByText('Localização copiada para a área de transferência.')).toHaveCount(0)
+  })
+
+  test('fechar o diálogo de cópia manual da localização não altera o pedido', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await page.addInitScript(removeClipboard)
+
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Compartilhar Fechar ${Date.now()}` })
+
+    await page.goto('/painel')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    await expect(rescueCard.getByText('Pendente')).toBeVisible()
+    await rescueCard.getByRole('button', { name: 'Compartilhar localização' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText(SHARE_FAILED_MESSAGE)
+    await dialog.getByRole('button', { name: 'Fechar' }).click()
+
+    await expect(dialog).toBeHidden()
+    await expect(rescueCard.getByText('Pendente')).toBeVisible()
+    await expect(rescueCard.getByRole('button', { name: 'Assumir' })).toBeVisible()
+    await expect(rescueCard.getByRole('button', { name: 'Cancelar' })).toBeVisible()
+  })
+
+  test('o diálogo de cópia manual da localização não some sozinho', async ({ page, request, loginAsAdminMaster }) => {
+    // O relógio controlado avança o tempo sem esperar de verdade: bem além dos
+    // segundos em que a confirmação de cópia some sozinha.
+    await page.clock.install()
+    await page.addInitScript(removeClipboard)
+
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Compartilhar Persistente ${Date.now()}` })
+
+    await page.goto('/painel')
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Compartilhar localização' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toContainText(SHARE_FAILED_MESSAGE)
+
+    await page.clock.fastForward(60_000)
+
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText(`${rescueRequest.latitude},${rescueRequest.longitude}`)
   })
 
   test('os botões de ação do card seguem o status do pedido', async ({ page, request, loginAsAdminMaster }) => {
