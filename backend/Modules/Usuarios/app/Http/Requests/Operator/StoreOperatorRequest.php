@@ -26,4 +26,17 @@ class StoreOperatorRequest extends FormRequest
             'password' => ['required', Password::defaults()],
         ];
     }
+
+    /**
+     * Messages fixed by REQUISITOS.md §4.5.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.unique' => 'Este e-mail já está cadastrado.',
+            'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
+        ];
+    }
 }

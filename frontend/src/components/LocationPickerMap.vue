@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '@/utils/leafletIcons'
+import '@/utils/leafletLocale'
 
 const props = defineProps({
   modelValue: {

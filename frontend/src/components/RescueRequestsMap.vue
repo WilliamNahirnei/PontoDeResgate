@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import '@/utils/leafletIcons'
+import '@/utils/leafletLocale'
 import { formatTotalPeople } from '@/utils/rescueRequestFormat'
 
 const props = defineProps({
