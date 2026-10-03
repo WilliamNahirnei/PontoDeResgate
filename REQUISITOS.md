@@ -22,6 +22,12 @@ O objetivo central é permitir que:
   - os créditos do mapa e os nomes de lugares mostrados nele;
   - os textos do próprio navegador ou do dispositivo (por exemplo, o pedido de permissão para usar a localização), que seguem o idioma configurado no aparelho.
 
+### 1.2 Endereços inexistentes
+- Um endereço que não corresponde a nenhuma tela do sistema não mostra uma tela em branco nem uma página própria de erro: leva a uma tela existente, conforme a sessão.
+- Sem sessão de operador ou de admin master, a pessoa é levada à tela pública de solicitação de socorro (§3), tanto para endereços fora da área do operador quanto para endereços dentro dela (por exemplo, `/painel/nao-existe`).
+- Com sessão de operador ou de admin master, o usuário é levado ao painel (§4), tanto para endereços fora da área do operador quanto dentro dela.
+- Um endereço inexistente dentro da área do operador não leva ao login: quem não tem sessão não recebe indicação de que aquele endereço pertence à área do operador.
+
 ## 2. Papéis de usuário
 
 - **Pessoa em situação de risco**: pessoa que, durante um desastre de grande escala, precisa ser resgatada.
