@@ -4,6 +4,7 @@ import api from '@/services/api'
 import RescueRequestsMap from '@/components/RescueRequestsMap.vue'
 import RescueRequestsList from '@/components/RescueRequestsList.vue'
 import CancelRescueRequestDialog from '@/components/CancelRescueRequestDialog.vue'
+import { MAX_QUANTITY, isValidQuantity, quantityRules } from '@/utils/quantity'
 
 const STATUS_OPTIONS = [
   { title: 'Todos os status', value: 'all' },
@@ -68,9 +69,11 @@ function buildQueryParams() {
     params.status = statusFilter.value
   }
 
+  // Uma quantidade mínima inválida nunca é enviada: o próprio campo mostra o
+  // erro (REQUISITOS.md §4.1).
   for (const { field } of QUANTITY_FIELDS) {
     const minValue = minQuantities.value[field]
-    if (minValue !== '' && minValue !== null) {
+    if (minValue !== '' && minValue !== null && isValidQuantity(minValue)) {
       params[`min_${field}`] = minValue
     }
   }
@@ -100,6 +103,12 @@ watch(
   minQuantities,
   () => {
     clearTimeout(quantityFilterTimeout)
+
+    // Com uma quantidade mínima inválida, o mapa e a lista ficam como estavam.
+    if (QUANTITY_FIELDS.some(({ field }) => !isValidQuantity(minQuantities.value[field]))) {
+      return
+    }
+
     quantityFilterTimeout = setTimeout(fetchRescueRequests, 400)
   },
   { deep: true },
@@ -220,9 +229,11 @@ onMounted(fetchRescueRequests)
             :label="`Mín. ${label.toLowerCase()}`"
             type="number"
             min="0"
+            :max="MAX_QUANTITY"
+            :rules="quantityRules"
             density="compact"
             class="mb-2"
-            hide-details
+            hide-details="auto"
           />
           <v-btn variant="text" block class="text-none" @click="clearQuantityFilters">Limpar filtros</v-btn>
         </v-card>

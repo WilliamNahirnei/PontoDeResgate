@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import LocationPickerMap from '@/components/LocationPickerMap.vue'
 import api from '@/services/api'
+import { MAX_QUANTITY, quantityRules } from '@/utils/quantity'
 
 const location = ref(null)
 
@@ -15,18 +16,6 @@ const form = reactive({
   animals_count: null,
   reference_point: '',
 })
-
-const MAX_QUANTITY = 999
-const INVALID_QUANTITY_MESSAGE = `Informe um número inteiro de 0 a ${MAX_QUANTITY}`
-
-// Campo em branco é quantidade não informada; preenchido, precisa ser inteiro de 0 a 999.
-const quantityRules = [
-  (value) =>
-    value === '' ||
-    value === null ||
-    (Number.isInteger(value) && value >= 0 && value <= MAX_QUANTITY) ||
-    INVALID_QUANTITY_MESSAGE,
-]
 
 const submitting = ref(false)
 const submitted = ref(false)
