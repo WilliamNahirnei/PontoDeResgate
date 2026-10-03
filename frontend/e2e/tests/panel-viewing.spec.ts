@@ -407,4 +407,13 @@ test.describe('Painel — visualização de pedidos', () => {
     await expect(cardB).toHaveClass(/v-card--variant-tonal/)
     await expect(cardA).not.toHaveClass(/v-card--variant-tonal/)
   })
+
+  test('os botões de aproximar e afastar do mapa do painel têm nomes em português', async ({ page, loginAsAdminMaster }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+
+    const map = page.locator('.panel-map')
+    await expect(map.getByRole('button', { name: 'Aproximar' })).toBeVisible()
+    await expect(map.getByRole('button', { name: 'Afastar' })).toBeVisible()
+  })
 })

@@ -411,4 +411,12 @@ test.describe('Pedido público de socorro', () => {
       await expect(card).toContainText(/homens?\D{0,3}5\b/i)
     })
   })
+
+  test('os botões de aproximar e afastar do mapa têm nomes em português', async ({ page }) => {
+    await page.goto('/')
+
+    const map = page.locator('.location-picker-map')
+    await expect(map.getByRole('button', { name: 'Aproximar' })).toBeVisible()
+    await expect(map.getByRole('button', { name: 'Afastar' })).toBeVisible()
+  })
 })

@@ -4,6 +4,26 @@ import { adminMasterToken, createOperator } from '../fixtures/operators'
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
 
+const EMAIL_TAKEN_MESSAGE = 'Este e-mail já está cadastrado.'
+const SHORT_PASSWORD_MESSAGE = 'A senha deve ter pelo menos 8 caracteres.'
+
+async function fillOperatorForm(page, data: { name: string; email: string; password: string }) {
+  await page.goto('/painel/operadores/novo')
+  await page.getByLabel('Nome').fill(data.name)
+  await page.getByLabel('E-mail').fill(data.email)
+  await page.getByLabel('Senha').fill(data.password)
+  await page.getByRole('button', { name: 'Cadastrar' }).click()
+}
+
+async function operatorsByEmail(request, adminToken: string, email: string) {
+  const response = await request.get(`${API_BASE_URL}/api/operators`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    params: { email },
+  })
+
+  return (await response.json()).data
+}
+
 test.describe('Gestão de operadores', () => {
   test('admin master cadastra um novo operador pela tela', async ({ page, loginAsAdminMaster }) => {
     await loginAsAdminMaster()
@@ -93,7 +113,7 @@ test.describe('Gestão de operadores', () => {
     await expect(page.getByText(`${namePrefix} 00`)).toBeVisible()
     await expect(page.getByText(`${namePrefix} 10`)).not.toBeVisible()
 
-    await page.getByRole('button', { name: 'Next page' }).click()
+    await page.getByRole('button', { name: 'Próxima página' }).click()
 
     await expect(page.getByText(`${namePrefix} 10`)).toBeVisible()
     await expect(page.getByText(`${namePrefix} 00`)).not.toBeVisible()
@@ -130,7 +150,7 @@ test.describe('Gestão de operadores', () => {
     await expect(row).toContainText('Ativo')
   })
 
-  test('cadastro com e-mail já existente mostra mensagem de erro e mantém o formulário', async ({
+  test('cadastro com o e-mail de um operador ativo mostra "Este e-mail já está cadastrado." e mantém o formulário', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -147,7 +167,7 @@ test.describe('Gestão de operadores', () => {
     await page.getByRole('button', { name: 'Cadastrar' }).click()
 
     // Os campos do Vuetify também têm role="alert" (vazios); o erro é o que tem texto.
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(EMAIL_TAKEN_MESSAGE)
     await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
     await expect(page.getByLabel('Nome')).toHaveValue(name)
     await expect(page.getByLabel('E-mail')).toHaveValue(existing.email)
@@ -295,5 +315,101 @@ test.describe('Gestão de operadores', () => {
 
     await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
     await expect(page.getByRole('button', { name: 'Cadastrar' })).toBeVisible()
+  })
+
+  test('cadastro com senha de menos de 8 caracteres mostra "A senha deve ter pelo menos 8 caracteres." e não cadastra o operador', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    const adminToken = await loginAsAdminMaster()
+    const email = `e2e.senhacurta.${Date.now()}@pontoderesgate.local`
+
+    await fillOperatorForm(page, { name: `Operador Senha Curta ${Date.now()}`, email, password: 'abc1234' })
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(SHORT_PASSWORD_MESSAGE)
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+    expect(await operatorsByEmail(request, adminToken, email)).toHaveLength(0)
+  })
+
+  test('cadastro com senha de exatamente 8 caracteres é aceito e o operador aparece na lista', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const name = `Operador Senha Oito ${Date.now()}`
+
+    await fillOperatorForm(page, { name, email: `e2e.senhaoito.${Date.now()}@pontoderesgate.local`, password: 'abcd1234' })
+
+    await expect(page).toHaveURL(/\/painel\/operadores$/)
+    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill(name)
+    await expect(page.getByRole('row', { name: new RegExp(name) })).toBeVisible()
+  })
+
+  test('cadastro com o e-mail de um operador desativado mostra "Este e-mail já está cadastrado." e não cadastra o operador', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    const adminToken = await loginAsAdminMaster()
+    const deactivated = await createOperator(request)
+    await request.post(`${API_BASE_URL}/api/operators/${deactivated.id}/deactivate`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    })
+
+    await fillOperatorForm(page, { name: `Operador Duplicado ${Date.now()}`, email: deactivated.email, password: 'senha-e2e-123' })
+
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(EMAIL_TAKEN_MESSAGE)
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+    expect(await operatorsByEmail(request, adminToken, deactivated.email)).toHaveLength(1)
+  })
+
+  test('a paginação da lista de operadores aparece em português, com os botões de página nomeados em português', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel/operadores')
+
+    // O banco compartilhado sempre tem mais de uma página de operadores.
+    await expect(page.getByText(/^\d+-\d+ de \d+$/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Primeira página' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Página anterior' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Próxima página' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Última página' })).toBeVisible()
+  })
+
+  test('o botão de limpar dos filtros de nome e de e-mail tem nome em português', async ({ page, loginAsAdminMaster }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel/operadores')
+
+    // O botão de limpar só aparece com o campo preenchido.
+    await page.getByRole('textbox', { name: 'Filtrar por nome' }).fill('Operador')
+    await page.getByRole('textbox', { name: 'Filtrar por e-mail' }).fill('operador')
+
+    await expect(page.getByRole('button', { name: 'Limpar Filtrar por nome' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Limpar Filtrar por e-mail' })).toBeVisible()
+  })
+
+  test('enquanto a lista de operadores carrega, o texto de carregamento aparece em português', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    // Segura a resposta da lista para a tela ficar no estado de carregamento,
+    // ainda sem nenhum operador.
+    let releaseList: () => void = () => {}
+    const listHeld = new Promise<void>((resolve) => {
+      releaseList = resolve
+    })
+    await page.route('**/api/operators?**', async (route) => {
+      await listHeld
+      await route.continue()
+    })
+
+    await page.goto('/painel/operadores')
+
+    await expect(page.getByText('Carregando itens...')).toBeVisible()
+    releaseList()
   })
 })

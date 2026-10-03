@@ -99,6 +99,7 @@ Todos os fluxos abaixo já têm spec (rastreabilidade cenário a cenário em
 5. `operators.spec.ts` e `panel-navigation.spec.ts` — gestão de operadores (admin master)
    e navegação condicional por papel.
 6. `rescue-status-logs.spec.ts` — tela de logs de auditoria (admin master).
+7. `page-language.spec.ts` — idioma das telas (todas reconhecidas como em português).
 
 Único item de `REQUISITOS.md` sem teste (porque a própria funcionalidade não foi
 localizada no código): alertas em tempo real via websocket (§5) — ver `CRZ-05` em

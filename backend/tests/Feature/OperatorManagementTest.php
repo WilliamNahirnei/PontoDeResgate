@@ -166,4 +166,66 @@ class OperatorManagementTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_short_password_is_rejected_with_a_portuguese_message(): void
+    {
+        $adminMaster = User::factory()->adminMaster()->create();
+
+        $response = $this->actingAs($adminMaster)->postJson('/api/operators', [
+            'name' => 'Novo Operador',
+            'email' => 'senha.curta@example.com',
+            'password' => 'abc1234',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('message', 'A senha deve ter pelo menos 8 caracteres.');
+        $response->assertJsonPath('errors.password.0', 'A senha deve ter pelo menos 8 caracteres.');
+        $this->assertDatabaseMissing('users', ['email' => 'senha.curta@example.com']);
+    }
+
+    public function test_password_with_exactly_8_characters_is_accepted(): void
+    {
+        $adminMaster = User::factory()->adminMaster()->create();
+
+        $response = $this->actingAs($adminMaster)->postJson('/api/operators', [
+            'name' => 'Novo Operador',
+            'email' => 'senha.oito@example.com',
+            'password' => 'abcd1234',
+        ]);
+
+        $response->assertCreated();
+    }
+
+    public function test_email_of_an_active_user_is_rejected_with_a_portuguese_message(): void
+    {
+        $adminMaster = User::factory()->adminMaster()->create();
+        $operator = User::factory()->create();
+
+        $response = $this->actingAs($adminMaster)->postJson('/api/operators', [
+            'name' => 'Novo Operador',
+            'email' => $operator->email,
+            'password' => 'senha-forte-123',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('message', 'Este e-mail já está cadastrado.');
+        $response->assertJsonPath('errors.email.0', 'Este e-mail já está cadastrado.');
+        $this->assertDatabaseCount('users', 2);
+    }
+
+    public function test_email_of_a_deactivated_user_is_rejected_with_a_portuguese_message(): void
+    {
+        $adminMaster = User::factory()->adminMaster()->create();
+        $operator = User::factory()->inactive()->create();
+
+        $response = $this->actingAs($adminMaster)->postJson('/api/operators', [
+            'name' => 'Novo Operador',
+            'email' => $operator->email,
+            'password' => 'senha-forte-123',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonPath('errors.email.0', 'Este e-mail já está cadastrado.');
+        $this->assertDatabaseCount('users', 2);
+    }
 }

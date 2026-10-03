@@ -13,6 +13,15 @@ O objetivo central é permitir que:
 - Operadores visualizem, priorizem e coordenem o atendimento desses pedidos em tempo hábil.
 - Voluntários, acionados pelos operadores, realizem o resgate no local indicado pela localização do pedido.
 
+### 1.1 Idioma
+- Todas as mensagens do sistema são em português, para todos os papéis (pessoa em situação de risco, operador e admin master): textos das telas, mensagens de sucesso e de erro, mensagens de validação dos campos, textos de paginação e os textos lidos por leitores de tela (por exemplo, o nome dos botões de página seguinte e anterior).
+- A regra vale também para as mensagens que o sistema devolve mesmo quando a tela não as mostra (por exemplo, sessão expirada, ou dados recusados quando o sistema é usado sem passar pela tela).
+- O navegador reconhece as telas como escritas em português.
+- Não são mensagens do sistema, e por isso podem estar em outro idioma:
+  - o que foi digitado por alguém (por exemplo, o nome e o ponto de referência de um pedido);
+  - os créditos do mapa e os nomes de lugares mostrados nele;
+  - os textos do próprio navegador ou do dispositivo (por exemplo, o pedido de permissão para usar a localização), que seguem o idioma configurado no aparelho.
+
 ## 2. Papéis de usuário
 
 - **Pessoa em situação de risco**: pessoa que, durante um desastre de grande escala, precisa ser resgatada.
@@ -137,6 +146,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 ### 4.5 Cadastro e gestão de operadores (admin master)
 - O admin master é responsável por cadastrar novos operadores no sistema.
+- **Cadastro de operador**:
+  - A senha tem no mínimo 8 caracteres. Com uma senha mais curta, o admin master vê a mensagem "A senha deve ter pelo menos 8 caracteres." e o operador não é cadastrado.
+  - O e-mail não pode ser o de outro usuário já cadastrado, ativo ou desativado. Nesse caso, o admin master vê a mensagem "Este e-mail já está cadastrado." e o operador não é cadastrado.
 - A tela do admin master possui um ponto de navegação para a lista de operadores.
 - **Lista de operadores**:
   - Exibe os dados dos operadores cadastrados.

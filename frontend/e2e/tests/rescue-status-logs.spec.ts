@@ -77,7 +77,7 @@ test.describe('Tela de logs de auditoria', () => {
 
     const page1Text = await page.locator('table').innerText()
 
-    const nextPageButton = page.getByRole('button', { name: 'Next page' })
+    const nextPageButton = page.getByRole('button', { name: 'Próxima página' })
     await expect(nextPageButton).toBeEnabled()
 
     const secondLogsResponse = waitForLogsResponse(page)
@@ -283,5 +283,44 @@ test.describe('Tela de logs de auditoria', () => {
 
     await openLogs(page)
     await expect(logRows(page, rescueRequest.requester_name)).toContainText(operator.name)
+  })
+
+  test('a paginação da tela de logs aparece em português, com os botões de página nomeados em português', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const logsResponse = waitForLogsResponse(page)
+    await page.goto('/painel/logs')
+    await logsResponse
+
+    // O banco compartilhado sempre tem mais de uma página de logs.
+    await expect(page.getByText(/^\d+-\d+ de \d+$/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Primeira página' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Página anterior' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Próxima página' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Última página' })).toBeVisible()
+  })
+
+  test('enquanto a tela de logs carrega, o texto de carregamento aparece em português', async ({
+    page,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    // Segura a resposta dos logs para a tela ficar no estado de carregamento,
+    // ainda sem nenhum log.
+    let releaseLogs: () => void = () => {}
+    const logsHeld = new Promise<void>((resolve) => {
+      releaseLogs = resolve
+    })
+    await page.route('**/api/rescue-status-logs?**', async (route) => {
+      await logsHeld
+      await route.continue()
+    })
+
+    await page.goto('/painel/logs')
+
+    await expect(page.getByText('Carregando itens...')).toBeVisible()
+    releaseLogs()
   })
 })
