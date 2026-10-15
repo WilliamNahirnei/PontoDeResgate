@@ -28,6 +28,11 @@ O objetivo central é permitir que:
 - Com sessão de operador ou de admin master, o usuário é levado ao painel (§4), tanto para endereços fora da área do operador quanto dentro dela.
 - Um endereço inexistente dentro da área do operador não leva ao login: quem não tem sessão não recebe indicação de que aquele endereço pertence à área do operador.
 
+### 1.3 Título da aba
+- Em todas as telas (pública, login, painel, lista e cadastro de operadores e logs), a aba do navegador mostra o título "PontoDeResgate", para todos os papéis (pessoa em situação de risco, operador e admin master).
+- O título é o mesmo em todas as telas e não muda ao navegar entre elas.
+- O título não é o nome da ferramenta de desenvolvimento (por exemplo, "Vite App").
+
 ## 2. Papéis de usuário
 
 - **Pessoa em situação de risco**: pessoa que, durante um desastre de grande escala, precisa ser resgatada.

@@ -101,6 +101,7 @@ Todos os fluxos abaixo já têm spec (rastreabilidade cenário a cenário em
 6. `rescue-status-logs.spec.ts` — tela de logs de auditoria (admin master).
 7. `page-language.spec.ts` — idioma das telas (todas reconhecidas como em português).
 8. `unknown-address.spec.ts` — endereço inexistente leva à tela de pedido ou ao painel.
+9. `page-title.spec.ts` — título da aba ("PontoDeResgate" em todas as telas).
 
 Único item de `REQUISITOS.md` sem teste (porque a própria funcionalidade não foi
 localizada no código): alertas em tempo real via websocket (§5) — ver `CRZ-05` em
