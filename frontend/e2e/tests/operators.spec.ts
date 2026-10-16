@@ -150,7 +150,7 @@ test.describe('Gestão de operadores', () => {
     await expect(row).toContainText('Ativo')
   })
 
-  test('cadastro com o e-mail de um operador ativo mostra "Este e-mail já está cadastrado." e mantém o formulário', async ({
+  test('cadastro com o e-mail de um operador ativo mostra "Este e-mail já está cadastrado." no campo de e-mail e mantém o formulário', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -166,8 +166,8 @@ test.describe('Gestão de operadores', () => {
     await page.getByLabel('Senha').fill('senha-e2e-123')
     await page.getByRole('button', { name: 'Cadastrar' }).click()
 
-    // Os campos do Vuetify também têm role="alert" (vazios); o erro é o que tem texto.
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByLabel('E-mail')).toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByText(EMAIL_TAKEN_MESSAGE)).toHaveCount(1)
     await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
     await expect(page.getByLabel('Nome')).toHaveValue(name)
     await expect(page.getByLabel('E-mail')).toHaveValue(existing.email)
@@ -317,7 +317,7 @@ test.describe('Gestão de operadores', () => {
     await expect(page.getByRole('button', { name: 'Cadastrar' })).toBeVisible()
   })
 
-  test('cadastro com senha de menos de 8 caracteres mostra "A senha deve ter pelo menos 8 caracteres." e não cadastra o operador', async ({
+  test('cadastro com senha de menos de 8 caracteres mostra "A senha deve ter pelo menos 8 caracteres." no campo de senha e não cadastra o operador', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -327,7 +327,8 @@ test.describe('Gestão de operadores', () => {
 
     await fillOperatorForm(page, { name: `Operador Senha Curta ${Date.now()}`, email, password: 'abc1234' })
 
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(SHORT_PASSWORD_MESSAGE)
+    await expect(page.getByLabel('Senha')).toHaveAccessibleDescription(SHORT_PASSWORD_MESSAGE)
+    await expect(page.getByText(SHORT_PASSWORD_MESSAGE)).toHaveCount(1)
     await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
     expect(await operatorsByEmail(request, adminToken, email)).toHaveLength(0)
   })
@@ -346,7 +347,7 @@ test.describe('Gestão de operadores', () => {
     await expect(page.getByRole('row', { name: new RegExp(name) })).toBeVisible()
   })
 
-  test('cadastro com o e-mail de um operador desativado mostra "Este e-mail já está cadastrado." e não cadastra o operador', async ({
+  test('cadastro com o e-mail de um operador desativado mostra "Este e-mail já está cadastrado." no campo de e-mail e não cadastra o operador', async ({
     page,
     request,
     loginAsAdminMaster,
@@ -359,9 +360,56 @@ test.describe('Gestão de operadores', () => {
 
     await fillOperatorForm(page, { name: `Operador Duplicado ${Date.now()}`, email: deactivated.email, password: 'senha-e2e-123' })
 
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByLabel('E-mail')).toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByText(EMAIL_TAKEN_MESSAGE)).toHaveCount(1)
     await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
     expect(await operatorsByEmail(request, adminToken, deactivated.email)).toHaveLength(1)
+  })
+
+  test('cadastro com e-mail já cadastrado e senha curta ao mesmo tempo mostra cada mensagem no seu campo, sem "(e mais 1 erro)"', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    const adminToken = await loginAsAdminMaster()
+    const existing = await createOperator(request)
+
+    await fillOperatorForm(page, { name: `Operador Dois Erros ${Date.now()}`, email: existing.email, password: 'abc1234' })
+
+    await expect(page.getByLabel('E-mail')).toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByLabel('Senha')).toHaveAccessibleDescription(SHORT_PASSWORD_MESSAGE)
+    await expect(page.getByText(EMAIL_TAKEN_MESSAGE)).toHaveCount(1)
+    await expect(page.getByText(SHORT_PASSWORD_MESSAGE)).toHaveCount(1)
+    await expect(page.getByText(/\(e mais \d+ erros?\)/)).toHaveCount(0)
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+    expect(await operatorsByEmail(request, adminToken, existing.email)).toHaveLength(1)
+  })
+
+  test('com os dois erros na tela, corrigir só um e enviar de novo faz sumir a mensagem desse campo e mantém a do outro', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const existing = await createOperator(request)
+
+    await fillOperatorForm(page, { name: `Operador Corrige Um ${Date.now()}`, email: existing.email, password: 'abc1234' })
+    await expect(page.getByLabel('E-mail')).toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByLabel('Senha')).toHaveAccessibleDescription(SHORT_PASSWORD_MESSAGE)
+
+    // Corrige o e-mail: a mensagem dele some e a da senha continua.
+    await page.getByLabel('E-mail').fill(`e2e.corrigido.${Date.now()}@pontoderesgate.local`)
+    await page.getByRole('button', { name: 'Cadastrar' }).click()
+    await expect(page.getByLabel('Senha')).toHaveAccessibleDescription(SHORT_PASSWORD_MESSAGE)
+    await expect(page.getByLabel('E-mail')).not.toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page).toHaveURL(/\/painel\/operadores\/novo$/)
+
+    // Volta ao e-mail repetido e corrige a senha: a mensagem dela some e a do e-mail volta.
+    await page.getByLabel('E-mail').fill(existing.email)
+    await page.getByLabel('Senha').fill('senha-e2e-123')
+    await page.getByRole('button', { name: 'Cadastrar' }).click()
+    await expect(page.getByLabel('E-mail')).toHaveAccessibleDescription(EMAIL_TAKEN_MESSAGE)
+    await expect(page.getByLabel('Senha')).not.toHaveAccessibleDescription(SHORT_PASSWORD_MESSAGE)
   })
 
   test('a paginação da lista de operadores aparece em português, com os botões de página nomeados em português', async ({

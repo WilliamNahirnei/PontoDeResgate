@@ -163,6 +163,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Cadastro de operador**:
   - A senha tem no mínimo 8 caracteres. Com uma senha mais curta, o admin master vê a mensagem "A senha deve ter pelo menos 8 caracteres." e o operador não é cadastrado.
   - O e-mail não pode ser o de outro usuário já cadastrado, ativo ou desativado. Nesse caso, o admin master vê a mensagem "Este e-mail já está cadastrado." e o operador não é cadastrado.
+  - Cada mensagem de erro do cadastro aparece no próprio campo a que se refere (a do e-mail no campo de e-mail, a da senha no campo de senha), e não num aviso geral da tela.
+  - Quando o cadastro tem mais de um erro ao mesmo tempo (por exemplo, e-mail já cadastrado e senha curta), o admin master vê todas as mensagens de uma vez, cada uma no seu campo. A tela não mostra textos como "(e mais 1 erro)".
+  - Corrigido um dos erros, a mensagem dele some do campo ao enviar de novo; as mensagens dos erros que continuam aparecem de novo.
 - A tela do admin master possui um ponto de navegação para a lista de operadores.
 - **Lista de operadores**:
   - Exibe os dados dos operadores cadastrados.

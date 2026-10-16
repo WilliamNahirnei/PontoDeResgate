@@ -10,10 +10,12 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+const fieldErrors = ref({})
 
 async function handleSubmit() {
   loading.value = true
   errorMessage.value = ''
+  fieldErrors.value = {}
 
   try {
     await api.post('/api/operators', {
@@ -23,7 +25,12 @@ async function handleSubmit() {
     })
     router.push({ name: 'operators-list' })
   } catch (error) {
-    errorMessage.value = error.response?.data?.message ?? 'Não foi possível cadastrar o operador.'
+    const errors = error.response?.data?.errors
+    if (errors) {
+      fieldErrors.value = errors
+    } else {
+      errorMessage.value = error.response?.data?.message ?? 'Não foi possível cadastrar o operador.'
+    }
   } finally {
     loading.value = false
   }
@@ -37,9 +44,9 @@ async function handleSubmit() {
       <v-card-subtitle class="mb-4">Cadastro de operador/voluntário</v-card-subtitle>
 
       <v-form @submit.prevent="handleSubmit">
-        <v-text-field v-model="name" label="Nome" class="mb-2" required />
-        <v-text-field v-model="email" label="E-mail" type="email" class="mb-2" required />
-        <v-text-field v-model="password" label="Senha" type="password" class="mb-4" required />
+        <v-text-field v-model="name" label="Nome" :error-messages="fieldErrors.name" class="mb-2" required />
+        <v-text-field v-model="email" label="E-mail" type="email" :error-messages="fieldErrors.email" class="mb-2" required />
+        <v-text-field v-model="password" label="Senha" type="password" :error-messages="fieldErrors.password" class="mb-4" required />
 
         <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
           {{ errorMessage }}
