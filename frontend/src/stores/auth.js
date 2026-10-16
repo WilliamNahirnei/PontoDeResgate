@@ -10,6 +10,34 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(token.value))
 
+  // O usuário guardado no navegador pode ser editado por quem o usa; o papel
+  // só vale depois de confirmado pelo servidor (no login ou em verifySession).
+  const sessionVerified = ref(false)
+  const isAdminMaster = computed(() => sessionVerified.value && user.value?.role === 'admin_master')
+  let verification = null
+
+  function verifySession() {
+    if (!token.value || sessionVerified.value) {
+      return Promise.resolve()
+    }
+
+    verification ??= api
+      .get('/api/me')
+      .then((response) => {
+        user.value = response.data.data
+        sessionVerified.value = true
+        persist()
+      })
+      .catch(() => {
+        // Sem confirmação, o papel guardado não vale: nenhuma tela de admin master abre.
+      })
+      .finally(() => {
+        verification = null
+      })
+
+    return verification
+  }
+
   function persist() {
     if (token.value) {
       localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token.value)
@@ -24,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     const response = await api.post('/api/login', { email, password })
     token.value = response.data.token
     user.value = response.data.user
+    sessionVerified.value = true
     persist()
   }
 
@@ -33,9 +62,10 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       token.value = null
       user.value = null
+      sessionVerified.value = false
       persist()
     }
   }
 
-  return { token, user, isAuthenticated, login, logout }
+  return { token, user, isAuthenticated, isAdminMaster, verifySession, login, logout }
 })

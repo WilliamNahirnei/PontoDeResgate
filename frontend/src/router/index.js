@@ -48,15 +48,20 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return { name: 'login' }
   }
 
+  // O papel guardado no navegador não vale sem confirmação do servidor.
+  if (to.meta.requiresAuth) {
+    await authStore.verifySession()
+  }
+
   // Operadores não têm acesso à gestão de operadores — apenas o admin master.
-  if (to.meta.requiresAdminMaster && authStore.user?.role !== 'admin_master') {
+  if (to.meta.requiresAdminMaster && !authStore.isAdminMaster) {
     return { name: 'panel' }
   }
 

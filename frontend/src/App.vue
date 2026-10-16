@@ -25,7 +25,7 @@ async function handleLogout() {
       <template #append>
         <v-btn variant="text" :to="{ name: 'panel' }" class="mr-2 text-none"> Painel </v-btn>
         <v-btn
-          v-if="authStore.user?.role === 'admin_master'"
+          v-if="authStore.isAdminMaster"
           variant="text"
           :to="{ name: 'operators-list' }"
           class="mr-2 text-none"
@@ -33,7 +33,7 @@ async function handleLogout() {
           Operadores
         </v-btn>
         <v-btn
-          v-if="authStore.user?.role === 'admin_master'"
+          v-if="authStore.isAdminMaster"
           variant="text"
           :to="{ name: 'logs-list' }"
           class="mr-2 text-none"

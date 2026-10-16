@@ -177,6 +177,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - Possui um botão que direciona para o cadastro de um novo operador.
 - Um operador desativado não consegue autenticar-se no sistema.
 - Operadores (que não sejam admin master) não têm acesso à lista de operadores nem ao cadastro de novos operadores — essas telas e os respectivos endpoints são exclusivos do admin master.
+- O papel que vale nas telas é o papel real da sessão, e não um valor guardado no navegador. Um operador que altere esse valor para admin master continua sem ver os itens de menu da lista de operadores e dos logs.
+- Esse mesmo operador, ao acessar direto a lista de operadores, o cadastro de operadores ou os logs, é levado ao painel, sem ver nem a estrutura dessas telas.
+- O admin master vê os itens de menu e as telas de admin master normalmente ao entrar e ao recarregar a página; essas telas e esses itens só aparecem depois de confirmado o papel real da sessão.
 
 ## 5. Alertas em tempo real (websocket leve)
 
