@@ -75,4 +75,4 @@ Nenhum.
 | Título da aba era "Vite App": passa a ser "PontoDeResgate" em todas as telas | `a5cafe1` |
 | Cadastro de operador com mais de um erro mostrava só o primeiro: cada mensagem passa a aparecer no próprio campo | `65cb11f` |
 | Papel forjado no `localStorage` abria a estrutura das telas de admin para um operador: o papel passa a valer só depois de confirmado pelo servidor | `d09eb03` |
-| Operador desativado com a sessão aberta (USR-61): autenticação recusada apaga a sessão e leva ao login com o alerta "Sua sessão expirou. Faça login novamente." | `9ee7ff5` |
+| Operador desativado com a sessão aberta (USR-61): autenticação recusada apaga a sessão e leva ao login com o alerta "Sua sessão expirou. Faça login novamente." | `c607445` |
