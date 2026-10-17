@@ -180,6 +180,12 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - O papel que vale nas telas é o papel real da sessão, e não um valor guardado no navegador. Um operador que altere esse valor para admin master continua sem ver os itens de menu da lista de operadores e dos logs.
 - Esse mesmo operador, ao acessar direto a lista de operadores, o cadastro de operadores ou os logs, é levado ao painel, sem ver nem a estrutura dessas telas.
 - O admin master vê os itens de menu e as telas de admin master normalmente ao entrar e ao recarregar a página; essas telas e esses itens só aparecem depois de confirmado o papel real da sessão.
+- Quando o sistema recusa a autenticação de quem está usando a área autenticada (painel, lista de operadores, cadastro de operadores e logs), a sessão guardada no navegador é apagada e a pessoa é levada à tela de login. Isso vale para operador e admin master, por exemplo quando o operador é desativado com a sessão aberta.
+- Na tela de login, a pessoa vê o alerta "Sua sessão expirou. Faça login novamente.". O alerta continua visível até a pessoa fechá-lo.
+- Só a recusa de autenticação leva ao login. Outros erros (por exemplo, falha ao carregar os pedidos ou ação sem permissão para o papel) mantêm o comportamento atual: a sessão é preservada e a pessoa continua na tela.
+- A senha ou o e-mail errados na própria tela de login não mostram esse alerta: a pessoa continua no login com a mensagem de credenciais inválidas.
+- A tela pública de solicitação de socorro não exige login e não é afetada: nenhuma recusa de autenticação leva a pessoa ao login a partir dela.
+- Depois de entrar de novo, o operador desativado continua sem conseguir autenticar-se (regra da linha 178).
 
 ## 5. Alertas em tempo real (websocket leve)
 

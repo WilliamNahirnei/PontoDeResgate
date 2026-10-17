@@ -58,6 +58,11 @@ router.beforeEach(async (to) => {
   // O papel guardado no navegador não vale sem confirmação do servidor.
   if (to.meta.requiresAuth) {
     await authStore.verifySession()
+
+    // O servidor recusou a autenticação: a sessão foi apagada.
+    if (!authStore.isAuthenticated) {
+      return { name: 'login' }
+    }
   }
 
   // Operadores não têm acesso à gestão de operadores — apenas o admin master.

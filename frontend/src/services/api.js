@@ -16,4 +16,27 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Chamadas em que um 401 não significa sessão recusada: no login é credencial
+// errada, e no logout a sessão já está sendo encerrada.
+const UNAUTHORIZED_IGNORED_URLS = ['/api/login', '/api/logout']
+
+let unauthorizedHandler = null
+
+export function onUnauthorized(handler) {
+  unauthorizedHandler = handler
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = error.config?.url ?? ''
+
+    if (error.response?.status === 401 && !UNAUTHORIZED_IGNORED_URLS.some((ignored) => url.endsWith(ignored))) {
+      unauthorizedHandler?.(error)
+    }
+
+    return Promise.reject(error)
+  },
+)
+
 export default api

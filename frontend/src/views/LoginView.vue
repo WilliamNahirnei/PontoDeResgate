@@ -36,6 +36,17 @@ async function handleSubmit() {
         <v-text-field v-model="email" label="E-mail" type="email" class="mb-2" required />
         <v-text-field v-model="password" label="Senha" type="password" class="mb-4" required />
 
+        <v-alert
+          v-if="authStore.sessionExpired"
+          type="warning"
+          variant="tonal"
+          closable
+          class="mb-4"
+          @click:close="authStore.dismissSessionExpired"
+        >
+          Sua sessão expirou. Faça login novamente.
+        </v-alert>
+
         <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
           {{ errorMessage }}
         </v-alert>

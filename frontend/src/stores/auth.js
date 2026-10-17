@@ -16,6 +16,26 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdminMaster = computed(() => sessionVerified.value && user.value?.role === 'admin_master')
   let verification = null
 
+  // Aviso mostrado na tela de login depois que o servidor recusa a autenticação.
+  const sessionExpired = ref(false)
+
+  // Apaga a sessão guardada (no store e no navegador). Só avisa que a sessão
+  // expirou se havia uma sessão a encerrar.
+  function endSession() {
+    if (token.value) {
+      sessionExpired.value = true
+    }
+
+    token.value = null
+    user.value = null
+    sessionVerified.value = false
+    persist()
+  }
+
+  function dismissSessionExpired() {
+    sessionExpired.value = false
+  }
+
   function verifySession() {
     if (!token.value || sessionVerified.value) {
       return Promise.resolve()
@@ -28,8 +48,11 @@ export const useAuthStore = defineStore('auth', () => {
         sessionVerified.value = true
         persist()
       })
-      .catch(() => {
+      .catch((error) => {
         // Sem confirmação, o papel guardado não vale: nenhuma tela de admin master abre.
+        if (error.response?.status === 401) {
+          endSession()
+        }
       })
       .finally(() => {
         verification = null
@@ -53,6 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = response.data.token
     user.value = response.data.user
     sessionVerified.value = true
+    sessionExpired.value = false
     persist()
   }
 
@@ -67,5 +91,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { token, user, isAuthenticated, isAdminMaster, verifySession, login, logout }
+  return {
+    token,
+    user,
+    isAuthenticated,
+    isAdminMaster,
+    sessionExpired,
+    verifySession,
+    endSession,
+    dismissSessionExpired,
+    login,
+    logout,
+  }
 })
