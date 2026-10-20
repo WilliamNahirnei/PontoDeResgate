@@ -10,6 +10,11 @@ async function loginThroughForm(page, email: string, password: string) {
   await page.getByRole('button', { name: 'Entrar' }).click()
 }
 
+async function expectNoStoredSession(page) {
+  expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))).toBeNull()
+  expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.user'))).toBeNull()
+}
+
 test.describe('Login', () => {
   test('login válido de operador comum redireciona para o painel, sem os itens de admin master', async ({
     page,
@@ -29,15 +34,20 @@ test.describe('Login', () => {
     await expect(page.getByRole('link', { name: 'Logs' })).toHaveCount(0)
   })
 
-  test('login inválido mostra mensagem de erro', async ({ page }) => {
-    await page.goto('/login')
-
-    await page.getByLabel('E-mail').fill('admin@pontoderesgate.local')
-    await page.getByLabel('Senha').fill('senha-errada')
-    await page.getByRole('button', { name: 'Entrar' }).click()
+  test('login com senha errada mostra mensagem de erro e não guarda sessão', async ({ page }) => {
+    await loginThroughForm(page, 'admin@pontoderesgate.local', 'senha-errada')
 
     await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
     await expect(page).toHaveURL(/\/login$/)
+    await expectNoStoredSession(page)
+  })
+
+  test('login com e-mail inexistente mostra a mesma mensagem de erro e não guarda sessão', async ({ page }) => {
+    await loginThroughForm(page, `inexistente.${Date.now()}@pontoderesgate.local`, 'senha-qualquer-123')
+
+    await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
+    await expect(page).toHaveURL(/\/login$/)
+    await expectNoStoredSession(page)
   })
 
   test('acesso ao painel sem sessão redireciona para o login', async ({ page }) => {
