@@ -38,17 +38,33 @@ test.describe('Login', () => {
     await expect(page).toHaveURL(/\/login$/)
   })
 
-  test('sessão de admin master abre o painel direto, sem passar pela tela de login', async ({
+  test('admin master entra pela tela de login, sem nenhum dado de sessão antes, e vê o painel com os itens de admin master', async ({
     page,
-    loginAsAdminMaster,
+    context,
   }) => {
-    await loginAsAdminMaster()
-    await page.goto('/painel')
+    // Parte de um navegador sem nenhum dado de login: apaga cookies e armazenamento.
+    await page.goto('/login')
+    await context.clearCookies()
+    await page.evaluate(() => {
+      window.localStorage.clear()
+      window.sessionStorage.clear()
+    })
+    await page.reload()
+    // O modo dev do Vue recria chaves do Devtools no localStorage; só as de sessão importam.
+    expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))).toBeNull()
+    expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.user'))).toBeNull()
 
-    // Afirma algo que só o painel mostra: checar apenas que a URL não é /login
-    // passa antes de a guarda de rota ter a chance de redirecionar.
-    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await page.getByLabel('E-mail').fill('admin@pontoderesgate.local')
+    await page.getByLabel('Senha').fill('password')
+    await page.getByRole('button', { name: 'Entrar' }).click()
+
     await expect(page).toHaveURL(/\/painel$/)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    // O nome do admin master semeado é "Admin Master"; os links de Operadores e
+    // Logs são exclusivos desse papel.
+    await expect(page.getByText('Admin Master', { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Operadores' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Logs' })).toBeVisible()
   })
 
   test('logout pela UI encerra a sessão e redireciona ao login', async ({ page, loginAsAdminMaster }) => {
