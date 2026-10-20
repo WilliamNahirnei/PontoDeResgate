@@ -92,13 +92,16 @@ test.describe('Login', () => {
     await page.getByRole('button', { name: 'Sair' }).click()
 
     await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
 
     // Não navega de novo para /painel aqui: o loginAsAdminMaster injeta a
     // sessão via addInitScript, que roda a cada novo carregamento de
     // documento na página — uma segunda navegação reinjetaria o token e
     // mascararia o logout. Basta confirmar que o storage foi limpo.
-    const remainingToken = await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))
-    expect(remainingToken).toBeNull()
+    await expectNoStoredSession(page)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toHaveCount(0)
+    // Sair por vontade própria não é recusa de autenticação: sem alerta de sessão expirada.
+    await expect(page.getByText('Sua sessão expirou. Faça login novamente.')).toHaveCount(0)
   })
 
   test('visitante sem sessão que acessa direto as telas de admin master é levado ao login', async ({ page }) => {
