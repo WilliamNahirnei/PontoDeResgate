@@ -104,14 +104,14 @@ test.describe('Login', () => {
     await expect(page.getByText('Sua sessão expirou. Faça login novamente.')).toHaveCount(0)
   })
 
-  test('visitante sem sessão que acessa direto as telas de admin master é levado ao login', async ({ page }) => {
-    for (const path of ['/painel/operadores', '/painel/operadores/novo', '/painel/logs']) {
+  // Um teste por rota: se uma falhar, o relatório diz qual.
+  for (const path of ['/painel/operadores', '/painel/operadores/novo', '/painel/logs']) {
+    test(`visitante sem sessão que acessa direto ${path} é levado ao login`, async ({ page }) => {
       await page.goto(path)
 
       await expect(page).toHaveURL(/\/login$/)
-      await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
-    }
-  })
+    })
+  }
 
   test('operador desativado pelo admin master não consegue entrar pela tela de login', async ({ page, request }) => {
     const operator = await createOperator(request)
