@@ -11,14 +11,22 @@ async function loginThroughForm(page, email: string, password: string) {
 }
 
 test.describe('Login', () => {
-  test('login válido redireciona para o painel', async ({ page }) => {
-    await page.goto('/login')
+  test('login válido de operador comum redireciona para o painel, sem os itens de admin master', async ({
+    page,
+    request,
+  }) => {
+    const operator = await createOperator(request)
 
-    await page.getByLabel('E-mail').fill('admin@pontoderesgate.local')
-    await page.getByLabel('Senha').fill('password')
-    await page.getByRole('button', { name: 'Entrar' }).click()
+    await loginThroughForm(page, operator.email, operator.password)
 
     await expect(page).toHaveURL(/\/painel$/)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(page.getByText(operator.name)).toBeVisible()
+    // Espera a barra do painel estar desenhada (link "Painel") antes de afirmar a
+    // ausência dos links de admin master, senão a checagem passa antes da hora.
+    await expect(page.getByRole('link', { name: 'Painel' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Operadores' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Logs' })).toHaveCount(0)
   })
 
   test('login inválido mostra mensagem de erro', async ({ page }) => {
