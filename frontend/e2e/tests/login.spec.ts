@@ -132,18 +132,34 @@ test.describe('Login', () => {
 
   test('operador reativado volta a conseguir entrar pela tela de login', async ({ page, request }) => {
     const operator = await createOperator(request)
-    const adminToken = await adminMasterToken(request)
-    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    })
-    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/activate`, {
-      headers: { Authorization: `Bearer ${adminToken}` },
-    })
+    const headers = { Authorization: `Bearer ${await adminMasterToken(request)}` }
+    const deactivation = await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, { headers })
+    expect(deactivation.ok()).toBeTruthy()
 
+    // Ainda desativado: a recusa é o ponto de partida, para provar que a
+    // reativação é o que muda o resultado com as mesmas credenciais.
     await loginThroughForm(page, operator.email, operator.password)
+    await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
+    await expect(page).toHaveURL(/\/login$/)
 
-    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    // A reativação é feita por API: o clique no botão pertence a outro cenário.
+    const activation = await request.post(`${API_BASE_URL}/api/operators/${operator.id}/activate`, { headers })
+    expect(activation.ok()).toBeTruthy()
+
+    // Mesma página, sem recarregar: preenche o formulário de novo.
+    await page.getByLabel('E-mail').fill(operator.email)
+    await page.getByLabel('Senha').fill(operator.password)
+    await page.getByRole('button', { name: 'Entrar' }).click()
+
     await expect(page).toHaveURL(/\/painel$/)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    await expect(page.getByText(operator.name)).toBeVisible()
+    // Espera a barra estar desenhada antes de afirmar a ausência dos links de admin master.
+    await expect(page.getByRole('link', { name: 'Painel' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Operadores' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Logs' })).toHaveCount(0)
+    expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))).toBeTruthy()
+    expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.user'))).toBeTruthy()
   })
 
   test('depois do logout, voltar no navegador não reabre o painel', async ({ page, request }) => {
