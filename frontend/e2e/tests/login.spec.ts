@@ -193,11 +193,21 @@ test.describe('Login', () => {
     const operator = await createOperator(request)
     await loginThroughForm(page, operator.email, operator.password)
     await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    const tokenBeforeReload = await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))
+    expect(tokenBeforeReload).toBeTruthy()
 
-    await page.reload()
+    // O nome na barra vem do localStorage e não prova sessão válida; quem prova
+    // é a lista de pedidos voltar 200 com o token depois do reload.
+    const [listResponse] = await Promise.all([
+      page.waitForResponse((res) => new URL(res.url()).pathname === '/api/rescue-requests' && res.request().method() === 'GET'),
+      page.reload(),
+    ])
 
+    expect(listResponse.status()).toBe(200)
     await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
     await expect(page.getByText(operator.name)).toBeVisible()
     await expect(page).toHaveURL(/\/painel$/)
+    expect(await page.evaluate(() => window.localStorage.getItem('pontoderesgate.token'))).toBe(tokenBeforeReload)
+    await expect(page.getByText('Sua sessão expirou. Faça login novamente.')).toHaveCount(0)
   })
 })
