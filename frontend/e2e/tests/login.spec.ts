@@ -171,12 +171,22 @@ test.describe('Login', () => {
 
     await page.getByRole('button', { name: 'Sair' }).click()
     await expect(page).toHaveURL(/\/login$/)
+    // A URL antes e depois do goBack é a mesma (/login); sem isto, um goBack
+    // que não saísse do lugar passaria. A entrada anterior do histórico é o painel.
+    expect(await page.evaluate(() => window.history.state?.back)).toBe('/painel')
+
+    const apiRequests: string[] = []
+    page.on('request', (req) => {
+      if (req.url().includes('/api/')) apiRequests.push(req.url())
+    })
 
     await page.goBack()
 
     await expect(page).toHaveURL(/\/login$/)
     await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toHaveCount(0)
+    await expectNoStoredSession(page)
+    expect(apiRequests.filter((url) => url.includes('/api/rescue-requests'))).toEqual([])
   })
 
   test('recarregar a página com o painel aberto mantém a sessão do operador', async ({ page, request }) => {
