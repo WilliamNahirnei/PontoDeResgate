@@ -115,14 +115,19 @@ test.describe('Login', () => {
 
   test('operador desativado pelo admin master não consegue entrar pela tela de login', async ({ page, request }) => {
     const operator = await createOperator(request)
-    await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, {
+    const deactivation = await request.post(`${API_BASE_URL}/api/operators/${operator.id}/deactivate`, {
       headers: { Authorization: `Bearer ${await adminMasterToken(request)}` },
     })
+    expect(deactivation.ok()).toBeTruthy()
 
     await loginThroughForm(page, operator.email, operator.password)
 
+    // Mensagem genérica de propósito: dizer "desativado" confirmaria a quem
+    // descobriu um e-mail e senha que as credenciais estão certas.
     await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
+    await expect(page.getByText(/desativ/i)).toHaveCount(0)
     await expect(page).toHaveURL(/\/login$/)
+    await expectNoStoredSession(page)
   })
 
   test('operador reativado volta a conseguir entrar pela tela de login', async ({ page, request }) => {
