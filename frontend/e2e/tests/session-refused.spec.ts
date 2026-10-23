@@ -73,8 +73,14 @@ test.describe('Sessão recusada', () => {
 
     await page.getByRole('button', { name: 'Atualizar' }).click()
 
+    // A espera por /login é só passo do roteiro; o redirecionamento é do USR-61.
     await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByText(SESSION_EXPIRED_MESSAGE)).toBeVisible()
+    // Texto exato e como alerta (v-alert tem role="alert"): o requisito fixa a frase.
+    const alert = page.getByRole('alert').filter({ hasText: 'Sua sessão expirou' })
+    await expect(alert).toBeVisible()
+    await expect(alert).toHaveText(SESSION_EXPIRED_MESSAGE)
+    // Quem foi levado ao login pela recusa não tentou entrar: sem erro de credenciais.
+    await expect(page.getByText('E-mail ou senha inválidos.')).toHaveCount(0)
   })
 
   test('o alerta de sessão expirada continua visível até a pessoa fechá-lo', async ({ page, request }) => {
