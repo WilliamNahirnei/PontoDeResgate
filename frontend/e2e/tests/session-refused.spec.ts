@@ -91,13 +91,18 @@ test.describe('Sessão recusada', () => {
     await deactivateOperator(request, operator.id)
 
     await page.getByRole('button', { name: 'Atualizar' }).click()
-    const alert = page.getByText(SESSION_EXPIRED_MESSAGE)
+    const alert = page.getByRole('alert').filter({ hasText: SESSION_EXPIRED_MESSAGE })
     await expect(alert).toBeVisible()
 
+    // Prova que o relógio controlado avançou: sem isto, "não some sozinho" passaria
+    // mesmo que o fastForward não tivesse efeito na página.
+    const before = await page.evaluate(() => Date.now())
     await page.clock.fastForward('05:00')
+    const after = await page.evaluate(() => Date.now())
+    expect(after - before).toBeGreaterThanOrEqual(5 * 60 * 1000)
     await expect(alert).toBeVisible()
 
-    await page.getByRole('button', { name: 'Fechar' }).click()
+    await alert.getByRole('button', { name: 'Fechar' }).click()
     await expect(alert).toHaveCount(0)
   })
 
