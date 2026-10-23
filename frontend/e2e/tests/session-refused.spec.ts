@@ -157,16 +157,26 @@ test.describe('Sessão recusada', () => {
     }
   })
 
-  test('e-mail ou senha errados na tela de login não mostram o alerta de sessão expirada', async ({ page }) => {
-    await page.goto('/login')
-    await page.getByLabel('E-mail').fill('admin@pontoderesgate.local')
-    await page.getByLabel('Senha').fill('senha-errada')
-    await page.getByRole('button', { name: 'Entrar' }).click()
+  // Um teste por variante: se uma falhar, o relatório diz qual.
+  const invalidCredentials = [
+    ['senha errada', 'admin@pontoderesgate.local', 'senha-errada'],
+    ['e-mail inexistente', 'inexistente.sessao@pontoderesgate.local', 'senha-qualquer-123'],
+  ]
 
-    await expect(page.getByText('E-mail ou senha inválidos.')).toBeVisible()
-    await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByText(SESSION_EXPIRED_MESSAGE)).toHaveCount(0)
-  })
+  for (const [variant, email, password] of invalidCredentials) {
+    test(`${variant} na tela de login não mostra o alerta de sessão expirada`, async ({ page }) => {
+      await page.goto('/login')
+      await page.getByLabel('E-mail').fill(email)
+      await page.getByLabel('Senha').fill(password)
+      await page.getByRole('button', { name: 'Entrar' }).click()
+
+      // Só a mensagem de credenciais: é o único alerta com texto na tela (os campos
+      // do Vuetify também têm role="alert", mas vazios).
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText('E-mail ou senha inválidos.')
+      await expect(page.getByText(SESSION_EXPIRED_MESSAGE)).toHaveCount(0)
+      await expect(page).toHaveURL(/\/login$/)
+    })
+  }
 
   test('falha ao carregar os pedidos que não é de autenticação mantém a sessão e a pessoa no painel', async ({
     page,
