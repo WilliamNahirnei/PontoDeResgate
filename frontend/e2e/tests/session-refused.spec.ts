@@ -107,15 +107,29 @@ test.describe('Sessão recusada', () => {
   })
 
   test('depois da recusa a sessão guardada no navegador é apagada', async ({ page, request }) => {
-    const operator = await openPanelAsNewOperator(page, request)
+    // Entra pela tela de login, e não por injectSession: a injeção roda a cada
+    // carregamento de documento e mascararia a limpeza no reload e no acesso direto.
+    const operator = await createOperator(request)
+    await page.goto('/login')
+    await page.getByLabel('E-mail').fill(operator.email)
+    await page.getByLabel('Senha').fill(operator.password)
+    await page.getByRole('button', { name: 'Entrar' }).click()
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+    expect((await storedSession(page)).token).toBeTruthy()
     await deactivateOperator(request, operator.id)
 
     await page.getByRole('button', { name: 'Atualizar' }).click()
     await expect(page).toHaveURL(/\/login$/)
 
-    // Não recarrega nem navega por URL: a sessão é injetada a cada carregamento de
-    // documento e mascararia a limpeza. Basta conferir o armazenamento.
     expect(await storedSession(page)).toEqual({ token: null, user: null })
+
+    await page.reload()
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toHaveCount(0)
+
+    await page.goto('/painel')
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toHaveCount(0)
   })
 
   test('admin master com a autenticação recusada em uma tela de admin é levado ao login com o alerta', async ({
