@@ -31,7 +31,8 @@ async function deactivateOperator(request, operatorId: number) {
 // é revogado (logout pela API) antes de a página usá-lo.
 async function revokedAdminMasterSession(request) {
   const { token, user } = await loginViaApi(request, 'admin@pontoderesgate.local', 'password')
-  await request.post(`${API_BASE_URL}/api/logout`, { headers: { Authorization: `Bearer ${token}` } })
+  const logout = await request.post(`${API_BASE_URL}/api/logout`, { headers: { Authorization: `Bearer ${token}` } })
+  expect(logout.ok()).toBeTruthy()
 
   return { token, user }
 }
@@ -138,18 +139,21 @@ test.describe('Sessão recusada', () => {
   }) => {
     for (const path of ['/painel/operadores', '/painel/operadores/novo', '/painel/logs']) {
       const { token, user } = await revokedAdminMasterSession(request)
-      await page.addInitScript(
-        ([tokenKey, userKey, injectedToken, injectedUser]) => {
-          window.localStorage.setItem(tokenKey, injectedToken)
-          window.localStorage.setItem(userKey, JSON.stringify(injectedUser))
-        },
-        [TOKEN_STORAGE_KEY, USER_STORAGE_KEY, token, user],
-      )
+      // Cada volta injeta o seu token; o script da última volta roda por último e prevalece.
+      await injectSession(page, token, user)
 
-      await page.goto(path)
+      // Ao entrar direto na tela, a guarda confirma a sessão em GET /api/me: é essa
+      // chamada que o servidor recusa com 401 e leva ao login.
+      const [refused] = await Promise.all([
+        page.waitForResponse((res) => new URL(res.url()).pathname === '/api/me' && res.request().method() === 'GET'),
+        page.goto(path),
+      ])
+      expect(refused.status()).toBe(401)
 
       await expect(page).toHaveURL(/\/login$/)
-      await expect(page.getByText(SESSION_EXPIRED_MESSAGE)).toBeVisible()
+      const alert = page.getByRole('alert').filter({ hasText: 'Sua sessão expirou' })
+      await expect(alert).toBeVisible()
+      await expect(alert).toHaveText(SESSION_EXPIRED_MESSAGE)
     }
   })
 
