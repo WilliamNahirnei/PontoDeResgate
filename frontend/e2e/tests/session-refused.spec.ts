@@ -21,9 +21,10 @@ async function openPanelAsNewOperator(page, request) {
 }
 
 async function deactivateOperator(request, operatorId: number) {
-  await request.post(`${API_BASE_URL}/api/operators/${operatorId}/deactivate`, {
+  const response = await request.post(`${API_BASE_URL}/api/operators/${operatorId}/deactivate`, {
     headers: { Authorization: `Bearer ${await adminMasterToken(request)}` },
   })
+  expect(response.ok()).toBeTruthy()
 }
 
 // Faz o servidor recusar a autenticação de uma sessão do admin master: o token
@@ -53,7 +54,13 @@ test.describe('Sessão recusada', () => {
     const operator = await openPanelAsNewOperator(page, request)
     await deactivateOperator(request, operator.id)
 
-    await page.getByRole('button', { name: 'Atualizar' }).click()
+    // O redirecionamento só vale como prova se veio de uma recusa de autenticação
+    // do servidor (401), e não de outro erro qualquer.
+    const [refused] = await Promise.all([
+      page.waitForResponse((res) => new URL(res.url()).pathname === '/api/rescue-requests' && res.request().method() === 'GET'),
+      page.getByRole('button', { name: 'Atualizar' }).click(),
+    ])
+    expect(refused.status()).toBe(401)
 
     await expect(page).toHaveURL(/\/login$/)
     await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
