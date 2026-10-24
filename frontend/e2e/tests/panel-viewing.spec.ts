@@ -2,6 +2,13 @@ import { test, expect } from '../fixtures/auth'
 import { createRescueRequest } from '../fixtures/rescue-requests'
 import { randomCoordinates, stableBoundingBox } from '../fixtures/map'
 
+async function selectOption(page, combobox: string, option: string) {
+  await page.getByRole('combobox', { name: combobox }).focus()
+  await page.getByRole('combobox', { name: combobox }).press('Enter')
+  await page.getByRole('option', { name: option, exact: true }).click()
+}
+
+const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 const TOOLTIP = '.leaflet-tooltip'
 
 // Tamanho do círculo do marcador: 26px quando o pedido está selecionado, 18px
@@ -415,5 +422,54 @@ test.describe('Painel — visualização de pedidos', () => {
     const map = page.locator('.panel-map')
     await expect(map.getByRole('button', { name: 'Aproximar' })).toBeVisible()
     await expect(map.getByRole('button', { name: 'Afastar' })).toBeVisible()
+  })
+
+  test('ao selecionar pelo mapa um pedido cujo card está fora da parte visível da lista, a lista rola até o card', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    // A posição do alvo não pode depender de quão recente ele é (testes em
+    // paralelo criam pedidos o tempo todo) nem do que o banco acumulou. Todos os
+    // pedidos deste teste têm a mesma quantidade de animais, alta e própria
+    // dele. Com o mínimo igual a ela e a ordem crescente por animais, a lista
+    // começa por este grupo, e o empate se resolve pelo id: o alvo, criado por
+    // último, fica no fim do grupo, abaixo da parte visível da lista.
+    const unique = Date.now()
+    const animals = 900 + (unique % 99)
+    await Promise.all(
+      Array.from({ length: 14 }, (_, index) =>
+        request.post(`${API_BASE_URL}/api/rescue-requests`, {
+          data: {
+            requester_name: `E2E Rolagem Outro ${unique} #${index}`,
+            animals_count: animals,
+            ...randomCoordinates(),
+          },
+        }),
+      ),
+    )
+    const target = await createRescueRequest(request, {
+      requester_name: `E2E Rolagem Alvo ${unique}`,
+      animals_count: animals,
+      ...randomCoordinates(),
+    })
+
+    await page.goto('/painel')
+    await selectOption(page, 'Pedidos por página', '100')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByLabel('Mín. animais').fill(String(animals))
+    await selectOption(page, 'Ordenar por', 'Animais')
+    await page.locator('button:has(i.mdi-sort-ascending)').click()
+
+    const card = page.locator('.rescue-requests-list .v-card', { hasText: target.requester_name })
+    await expect(card).toBeVisible()
+    await expect(card).not.toBeInViewport()
+
+    await page.getByTestId(`rescue-request-marker-${target.id}`).dispatchEvent('click')
+
+    // A rolagem suave termina em subpixel: 95% já prova o card à vista (antes era 0).
+    await expect(card).toBeInViewport({ ratio: 0.95 })
+    await expect(card).toHaveClass(/v-card--variant-tonal/)
   })
 })

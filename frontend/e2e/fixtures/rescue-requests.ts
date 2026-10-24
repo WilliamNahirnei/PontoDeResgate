@@ -51,7 +51,8 @@ export async function createRescueRequest(
   })
 
   const token = await getAdminToken(request)
-  const listResponse = await request.get(`${API_BASE_URL}/api/rescue-requests`, {
+  // A listagem é paginada e traz os mais recentes primeiro: 100 é o máximo por página.
+  const listResponse = await request.get(`${API_BASE_URL}/api/rescue-requests?per_page=100`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const listBody = await listResponse.json()

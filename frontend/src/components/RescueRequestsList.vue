@@ -1,4 +1,5 @@
 <script setup>
+import { nextTick, watch } from 'vue'
 import { formatTotalPeople } from '@/utils/rescueRequestFormat'
 
 const props = defineProps({
@@ -18,6 +19,31 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select', 'assume', 'complete', 'cancel', 'share'])
+
+// Cards da lista por id do pedido, para rolar até o selecionado.
+const cardElements = new Map()
+
+function setCardElement(id, component) {
+  if (component) {
+    cardElements.set(id, component.$el)
+  } else {
+    cardElements.delete(id)
+  }
+}
+
+// Quando o pedido é selecionado pelo mapa e o card não está visível, a lista
+// rola até ele (REQUISITOS.md §4.1). "nearest" não mexe na lista se o card
+// já está à vista, como ao clicar no próprio card.
+watch(
+  () => props.selectedId,
+  async (id) => {
+    if (id == null) {
+      return
+    }
+    await nextTick()
+    cardElements.get(id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  },
+)
 
 const STATUS_LABELS = {
   pendente: 'Pendente',
@@ -61,6 +87,7 @@ function peopleComposition(rescueRequest) {
     <v-card
       v-for="rescueRequest in rescueRequests"
       :key="rescueRequest.id"
+      :ref="(component) => setCardElement(rescueRequest.id, component)"
       class="mb-2 pa-3"
       :variant="rescueRequest.id === selectedId ? 'tonal' : 'outlined'"
       :color="rescueRequest.id === selectedId ? 'primary' : undefined"
