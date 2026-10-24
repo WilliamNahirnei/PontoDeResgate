@@ -257,4 +257,35 @@ class IndexRescueRequestRequestTest extends TestCase
         $this->assertArrayHasKey('per_page', $rules);
         $this->assertArrayHasKey('page', $rules);
     }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function booleanMineValues(): array
+    {
+        return [
+            'true' => [true],
+            'false' => [false],
+            '1' => ['1'],
+            '0' => ['0'],
+        ];
+    }
+
+    #[DataProvider('booleanMineValues')]
+    #[TestDox('A validação deve aceitar um valor booleano no filtro "mine".')]
+    public function test_mine_accepts_boolean_values(mixed $value): void
+    {
+        $validator = Validator::make(['mine' => $value], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->passes());
+    }
+
+    #[TestDox('A validação deve rejeitar um valor que não é booleano no filtro "mine".')]
+    public function test_mine_must_be_boolean(): void
+    {
+        $validator = Validator::make(['mine' => 'talvez'], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('mine', $validator->errors()->toArray());
+    }
 }

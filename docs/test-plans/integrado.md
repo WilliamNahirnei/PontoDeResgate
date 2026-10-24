@@ -27,8 +27,8 @@
 | §1.3 Título da aba | Usuarios + Resgates | E2E | Implementado | CRZ-18 |
 | §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — conteúdo da tela de login (USR-100) Planejado | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80, USR-92–USR-100 |
 | §3 Tela pública de pedido | Resgates | E2E | Implementado | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125, RES-172–RES-181, RES-187 |
-| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) Não implementado | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161, RES-188, RES-190–RES-213 |
-| §4.2 Gestão de status do pedido | Resgates | E2E | Implementado | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-218, RES-154, RES-155, RES-162–RES-168, RES-170, RES-171, RES-182–RES-185 |
+| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) Não implementado | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161, RES-188, RES-190–RES-213, RES-220–RES-232 |
+| §4.2 Gestão de status do pedido | Resgates | E2E | Implementado | RES-233–RES-248, CRZ-19, RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-218, RES-154, RES-155, RES-162–RES-168, RES-170, RES-171, RES-182–RES-185 |
 | §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, RES-169, CRZ-10, CRZ-11 |
 | §4.4 Consulta de logs de operações | Resgates + Usuarios | E2E | Implementado | RES-69, RES-120, RES-142–RES-144, RES-214–RES-217, RES-219, RES-186, RES-189, CRZ-04, CRZ-06 |
 | §4.5 Cadastro e gestão de operadores | Usuarios | E2E | Implementado | USR-54–USR-57, USR-69, USR-72–USR-99 |
@@ -55,16 +55,17 @@
 | CRZ-16 | Endereço inexistente | E2E | Operador logado que acessa um endereço inexistente dentro da área do operador (ex.: `/painel/nao-existe`) é levado ao painel | Implementado | `frontend/e2e/tests/unknown-address.spec.ts` ("operador logado num endereço inexistente dentro da área do operador é levado ao painel") | `REQUISITOS.md` §1.2 (2026-10-03, achado "sem página 404"). O teste confere o endereço final e o título da tela. Corrigido em 2026-10-03 (achado "sem página 404"). |
 | CRZ-17 | Endereço inexistente | E2E | Admin master logado que acessa um endereço inexistente, fora ou dentro da área do operador, é levado ao painel | Implementado | `frontend/e2e/tests/unknown-address.spec.ts` ("admin master logado num endereço inexistente, fora ou dentro da área do operador, é levado ao painel") | `REQUISITOS.md` §1.2 (2026-10-03, achado "sem página 404"). O teste confere o endereço final e o título da tela. Corrigido em 2026-10-03 (achado "sem página 404"). |
 | CRZ-18 | Título da aba | E2E | Em todas as telas (pública, login, painel, lista e cadastro de operadores e logs), a aba do navegador mostra o título "PontoDeResgate", o mesmo em todas, e não mostra "Vite App" | Implementado | `frontend/e2e/tests/page-title.spec.ts` ("todas as telas mostram o título PontoDeResgate na aba") | `REQUISITOS.md` §1.3 (2026-10-15, achado "título da aba é Vite App"). Atravessa os dois módulos por percorrer as telas de ambos, como CRZ-12. Corrigido em 2026-10-15 (achado "título da aba é Vite App"): o título vem do `index.html`, que antes tinha o padrão do Vite ("Vite App"). O teste foi escrito antes da correção e falhou com "Vite App" até ela. |
+| CRZ-19 | Operadores × aviso de pedido alheio | E2E | Se o operador responsável foi desativado, o aviso ao concluir ou cancelar o pedido dele ainda mostra o nome do responsável | Implementado | `frontend/e2e/tests/panel-status-management.spec.ts` ("se o operador responsável foi desativado, o aviso de pedido de outro operador ainda mostra o nome dele") | `REQUISITOS.md` §4.2 (2026-10-24). Mesmo princípio do CRZ-11: o nome do operador desativado continua aparecendo. Teste escrito antes da implementação (falhou por faltar o aviso). |
 
 ## Visão geral de cobertura
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 40 | 129 | 12 | 181 |
+| Implementado | 40 | 158 | 13 | 211 |
 | Planejado | 1 | 0 | 0 | 1 |
 | Não coberto | 0 | 0 | 0 | 0 |
 | Não implementado | 0 | 1 | 1 | 2 |
-| **Total de cenários** | **41** | **130** | **13** | **184** |
+| **Total de cenários** | **41** | **159** | **14** | **214** |
 
 > Esta tabela é um retrato do momento em que o test plan foi escrito/atualizado pela
 > última vez — não é gerada automaticamente. Ao editar qualquer cenário em `usuarios.md`

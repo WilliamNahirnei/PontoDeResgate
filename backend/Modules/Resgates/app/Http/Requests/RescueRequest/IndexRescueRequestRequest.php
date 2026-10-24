@@ -50,6 +50,7 @@ class IndexRescueRequestRequest extends FormRequest
     {
         return [
             'status' => ['nullable', Rule::enum(RescueRequestStatus::class)],
+            'mine' => ['nullable', 'boolean'],
             'min_total_people' => ['nullable', 'integer', 'min:0', 'max:999'],
             'min_men_count' => ['nullable', 'integer', 'min:0', 'max:999'],
             'min_women_count' => ['nullable', 'integer', 'min:0', 'max:999'],

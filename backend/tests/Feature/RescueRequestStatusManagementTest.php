@@ -99,6 +99,53 @@ class RescueRequestStatusManagementTest extends TestCase
         $response->assertJsonValidationErrors(['cancellation_reason']);
     }
 
+    public function test_completing_a_request_of_another_operator_makes_the_completing_operator_the_responsible(): void
+    {
+        $assigned = User::factory()->create();
+        $completing = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $assigned->id]);
+
+        $response = $this->actingAs($completing)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.operator.id', $completing->id);
+        $this->assertDatabaseHas('rescue_requests', ['id' => $rescueRequest->id, 'operator_id' => $completing->id]);
+        $this->assertDatabaseHas('rescue_status_logs', [
+            'rescue_request_id' => $rescueRequest->id,
+            'operator_id' => $completing->id,
+            'new_status' => RescueRequestStatus::Concluido->value,
+        ]);
+    }
+
+    public function test_cancelling_a_request_of_another_operator_makes_the_cancelling_operator_the_responsible(): void
+    {
+        $assigned = User::factory()->create();
+        $cancelling = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $assigned->id]);
+
+        $response = $this->actingAs($cancelling)->postJson("/api/rescue-requests/{$rescueRequest->id}/cancel", [
+            'cancellation_reason' => 'Equipe sem acesso ao local.',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.operator.id', $cancelling->id);
+        $this->assertDatabaseHas('rescue_requests', ['id' => $rescueRequest->id, 'operator_id' => $cancelling->id]);
+    }
+
+    public function test_cancelling_a_pending_request_makes_the_cancelling_operator_the_responsible(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->create();
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/cancel", [
+            'cancellation_reason' => 'Pedido duplicado.',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.operator.id', $operator->id);
+        $this->assertDatabaseHas('rescue_requests', ['id' => $rescueRequest->id, 'operator_id' => $operator->id]);
+    }
+
     public function test_operators_can_list_rescue_requests(): void
     {
         $operator = User::factory()->create();

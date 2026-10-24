@@ -494,4 +494,25 @@ test.describe('Tela de logs de auditoria', () => {
 
     await expect(page.getByRole('dialog')).toContainText(note)
   })
+
+  test('depois que o operador B conclui o pedido que o operador A assumiu, a tela de logs mostra B como o operador da conclusão e A na entrada de assumir', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const assigned = await createOperator(request)
+    const completing = await createOperator(request)
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Log Troca ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume', assigned.token)
+    await changeRescueRequestStatus(request, rescueRequest.id, 'complete', completing.token)
+
+    await openLogs(page)
+
+    const rows = logRows(page, rescueRequest.requester_name)
+    await expect(rows).toHaveCount(2)
+    await expect(completionRow(page, rescueRequest.requester_name)).toContainText(completing.name)
+    await expect(completionRow(page, rescueRequest.requester_name)).not.toContainText(assigned.name)
+    await expect(rows.filter({ hasText: /Pendente[\s\S]*Em resgate/ })).toContainText(assigned.name)
+  })
 })

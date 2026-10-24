@@ -88,6 +88,19 @@ class RescueRequestRepositoryTest extends TestCase
         $this->assertSame(RescueRequestStatus::Pendente, $results->first()->status);
     }
 
+    #[TestDox('paginateWithFilters() deve filtrar pedidos pelo operador responsável informado.')]
+    public function test_paginate_with_filters_filters_by_the_responsible_operator(): void
+    {
+        $operator = User::factory()->create();
+        $mine = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+        RescueRequest::factory()->emResgate()->create(['operator_id' => User::factory()->create()->id]);
+        RescueRequest::factory()->create();
+
+        $results = $this->repository->paginateWithFilters(['operator_id' => $operator->id], 'created_at', 'desc', 50);
+
+        $this->assertSame([$mine->id], $results->pluck('id')->all());
+    }
+
     #[TestDox('paginateWithFilters() deve filtrar pedidos com quantidade mínima de pessoas.')]
     public function test_paginate_with_filters_filters_by_minimum_quantity(): void
     {

@@ -35,8 +35,14 @@ class RescueRequestController extends Controller
      */
     public function index(IndexRescueRequestRequest $request): AnonymousResourceCollection
     {
+        // "mine" restringe a lista aos pedidos em que o usuário autenticado é o responsável.
+        $filters = $request->safe()->except('mine');
+        if ($request->boolean('mine')) {
+            $filters['operator_id'] = $request->user()->id;
+        }
+
         $rescueRequests = $this->service->list(
-            $request->validated(),
+            $filters,
             $request->validated('sort_by', 'created_at'),
             $request->validated('sort_direction', 'desc'),
             $request->validated('per_page') ?? IndexRescueRequestRequest::DEFAULT_PER_PAGE,

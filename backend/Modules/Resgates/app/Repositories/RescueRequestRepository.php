@@ -46,6 +46,10 @@ class RescueRequestRepository implements RescueRequestRepositoryInterface
             ->when(
                 $this->filled($filters, 'status'),
                 fn ($query) => $query->where('status', $filters['status'])
+            )
+            ->when(
+                $this->filled($filters, 'operator_id'),
+                fn ($query) => $query->where('operator_id', $filters['operator_id'])
             );
 
         foreach (self::QUANTITY_FILTERS as $param => $column) {

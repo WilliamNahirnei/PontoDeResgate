@@ -6,6 +6,8 @@ import RescueRequestsList from '@/components/RescueRequestsList.vue'
 import RescueRequestsPagination from '@/components/RescueRequestsPagination.vue'
 import CancelRescueRequestDialog from '@/components/CancelRescueRequestDialog.vue'
 import CompleteRescueRequestDialog from '@/components/CompleteRescueRequestDialog.vue'
+import OtherOperatorRequestDialog from '@/components/OtherOperatorRequestDialog.vue'
+import { useAuthStore } from '@/stores/auth'
 import { MAX_QUANTITY, isValidQuantity, quantityRules } from '@/utils/quantity'
 
 const STATUS_OPTIONS = [
@@ -54,6 +56,7 @@ function savePerPage(value) {
   }
 }
 
+const auth = useAuthStore()
 const rescueRequests = ref([])
 const perPage = ref(loadPerPage())
 const page = ref(1)
@@ -66,6 +69,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
 const completeDialogRequest = ref(null)
+// Aviso de que o pedido é de outro operador: guarda o pedido e a ação (complete ou cancel) à espera da confirmação.
+const otherOperatorWarning = ref(null)
 const shareFeedback = ref(false)
 // Link mostrado para cópia manual quando a cópia automática falha.
 const manualShareUrl = ref('')
@@ -84,15 +89,17 @@ const completeInProgress = computed(
 const DEFAULT_ACTION_ERROR_MESSAGE = 'Não foi possível alterar o pedido. Tente novamente.'
 
 const statusFilter = ref('all')
+const mineOnly = ref(false)
 const minQuantities = ref(Object.fromEntries(QUANTITY_FIELDS.map(({ field }) => [field, ''])))
 const sortField = ref('created_at')
 const sortDirection = ref('desc')
 
 function clearQuantityFilters() {
-  const hadFilters = QUANTITY_FIELDS.some(({ field }) => minQuantities.value[field] !== '')
+  const hadFilters = mineOnly.value || QUANTITY_FIELDS.some(({ field }) => minQuantities.value[field] !== '')
   for (const { field } of QUANTITY_FIELDS) {
     minQuantities.value[field] = ''
   }
+  mineOnly.value = false
 
   // Sem nenhum filtro para limpar, o watcher dos filtros não dispara: volta à
   // primeira página daqui.
@@ -114,6 +121,10 @@ function buildQueryParams() {
 
   if (statusFilter.value !== 'all') {
     params.status = statusFilter.value
+  }
+
+  if (mineOnly.value) {
+    params.mine = 1
   }
 
   // Uma quantidade mínima inválida nunca é enviada: o próprio campo mostra o
@@ -159,7 +170,7 @@ async function fetchRescueRequests() {
 
 let quantityFilterTimeout = null
 
-// Mudar status, quantidade mínima, ordenação ou quantidade por página leva a
+// Mudar status, "Meus pedidos", quantidade mínima, ordenação ou quantidade por página leva a
 // lista de volta à primeira página.
 function fetchFirstPage() {
   page.value = 1
@@ -177,7 +188,7 @@ function handlePerPageChange(value) {
   return fetchFirstPage()
 }
 
-watch(statusFilter, fetchFirstPage)
+watch([statusFilter, mineOnly], fetchFirstPage)
 watch([sortField, sortDirection], fetchFirstPage)
 watch(
   minQuantities,
@@ -241,8 +252,28 @@ function handleAssume(rescueRequest) {
   return runStatusAction(rescueRequest, 'assume')
 }
 
+// Concluir ou cancelar o pedido de outro operador pede confirmação antes do
+// diálogo da ação; pedidos sem responsável ou do próprio operador abrem direto.
+function isOfAnotherOperator(rescueRequest) {
+  return Boolean(rescueRequest.operator) && rescueRequest.operator.id !== auth.user?.id
+}
+
 function openCompleteDialog(rescueRequest) {
+  if (isOfAnotherOperator(rescueRequest)) {
+    otherOperatorWarning.value = { rescueRequest, action: 'complete' }
+    return
+  }
   completeDialogRequest.value = rescueRequest
+}
+
+function confirmOtherOperatorWarning() {
+  const { rescueRequest, action } = otherOperatorWarning.value
+  otherOperatorWarning.value = null
+  if (action === 'complete') {
+    completeDialogRequest.value = rescueRequest
+  } else {
+    cancelDialogRequest.value = rescueRequest
+  }
 }
 
 // A observação é opcional: sem texto, a conclusão é enviada sem ela.
@@ -251,6 +282,10 @@ function handleCompleteConfirm(note) {
 }
 
 function openCancelDialog(rescueRequest) {
+  if (isOfAnotherOperator(rescueRequest)) {
+    otherOperatorWarning.value = { rescueRequest, action: 'cancel' }
+    return
+  }
   cancelDialogRequest.value = rescueRequest
 }
 
@@ -300,6 +335,17 @@ onMounted(fetchRescueRequests)
         hide-details
         style="max-width: 200px"
       />
+
+      <v-btn
+        :variant="mineOnly ? 'flat' : 'outlined'"
+        :color="mineOnly ? 'primary' : undefined"
+        :aria-pressed="String(mineOnly)"
+        prepend-icon="mdi-account-check"
+        class="text-none"
+        @click="mineOnly = !mineOnly"
+      >
+        Meus pedidos
+      </v-btn>
 
       <v-menu :close-on-content-click="false">
         <template #activator="{ props: menuProps }">
@@ -373,6 +419,13 @@ onMounted(fetchRescueRequests)
         />
       </div>
     </div>
+
+    <OtherOperatorRequestDialog
+      :model-value="Boolean(otherOperatorWarning)"
+      :operator-name="otherOperatorWarning?.rescueRequest.operator.name"
+      @update:model-value="(value) => { if (!value) otherOperatorWarning = null }"
+      @confirm="confirmOtherOperatorWarning"
+    />
 
     <CompleteRescueRequestDialog
       :model-value="Boolean(completeDialogRequest)"

@@ -100,7 +100,9 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Filtros**: os pedidos exibidos no mapa e na lista podem ser filtrados por:
   - Status: um status por vez ou todos. Ao abrir o painel, todos os status são exibidos.
   - Quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais.
-  - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima, a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo, e na primeira página.
+  - **Meus pedidos**: botão que liga e desliga, para o operador e para o admin master. Ligado, o mapa e a lista mostram só os pedidos em que a pessoa logada é o operador responsável, em qualquer status; os pedidos pendentes sem responsável não aparecem. Desligado, o painel mostra os pedidos de todos.
+  - O botão "Meus pedidos" fica em destaque enquanto está ligado, vale em conjunto com os demais filtros e começa desligado ao abrir o painel.
+  - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima, "Meus pedidos" desligado, a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo, e na primeira página.
 - Com um filtro de quantidade mínima aplicado, só aparecem os pedidos em que essa quantidade foi informada e é igual ou maior que o mínimo; os pedidos em que ela não foi informada (campos opcionais no formulário público) não aparecem no mapa nem na lista.
 - Cada quantidade mínima, quando informada, é um número inteiro de **0 a 999**; deixada em branco, não filtra.
 - Quando o operador ou o admin master informa uma quantidade mínima inválida (acima de 999, negativa ou com casas decimais), o próprio campo mostra a mensagem "Informe um número inteiro de 0 a 999", e o painel não mostra a mensagem de erro de carregamento dos pedidos.
@@ -116,7 +118,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - A quantidade escolhida fica guardada no navegador: ao reabrir o painel, a lista vem com ela. Não havendo quantidade guardada, ou sendo ela inválida, vale 50.
 - A lista mostra a posição dos pedidos da página no total (ex.: "1-50 de 120") e permite ir para a página seguinte, a anterior, a primeira e a última; os botões de página seguinte e última ficam indisponíveis na última página, e os de página anterior e primeira, na primeira.
 - O mapa mostra somente os pedidos da página aberta, os mesmos da lista; ao trocar de página, o mapa passa a mostrar os da nova página, sem se reposicionar (o enquadramento automático acontece só na primeira carga).
-- Mudar o status, qualquer quantidade mínima, a ordenação ou a quantidade por página leva a lista de volta à primeira página.
+- Mudar o status, qualquer quantidade mínima, o botão "Meus pedidos", a ordenação ou a quantidade por página leva a lista de volta à primeira página.
 - "Limpar filtros" também leva a lista à primeira página, mas mantém a quantidade por página escolhida.
 - Assumir, concluir ou cancelar um pedido atualiza a página aberta, sem voltar à primeira.
 - A paginação respeita os filtros e a ordenação: o total e as páginas contam só os pedidos que atendem aos filtros, na ordem escolhida (os pedidos sem a quantidade informada continuam no fim da lista inteira, e não no fim de cada página).
@@ -142,6 +144,15 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
   - O motivo tem no máximo **1000 caracteres**.
   - O campo do motivo mostra ao operador quantos caracteres já foram usados de 1000 e não aceita além disso: o texto digitado ou colado para no 1000º caractere.
   - O sistema não registra motivo com mais de 1000 caracteres, mesmo que ele não tenha sido informado pela tela.
+- **Responsável pelo pedido**: o pedido guarda sempre o operador responsável atual, que aparece no card.
+  - Quem assume o pedido passa a ser o responsável.
+  - Quando outro operador (ou o admin master) conclui ou cancela o pedido, ele passa a ser o responsável. O log de operações (§4.3) registra quem fez a ação, como hoje.
+  - Quem conclui ou cancela um pedido pendente, que ainda não tinha responsável, passa a ser o responsável.
+- **Ação sobre um pedido de outro operador**: ao acionar "Concluir" ou "Cancelar" num pedido cujo responsável é outra pessoa, a tela avisa que o pedido é de outro operador, informa o nome dele e pede confirmação antes de seguir.
+  - Confirmando, a ação segue normalmente (diálogo de observação ou de motivo, conforme o caso) e vale como qualquer outra.
+  - Desistindo no aviso, o pedido não é alterado.
+  - O aviso não aparece quando o pedido é de quem age nem quando o pedido não tem responsável.
+  - Assumir não tem esse aviso: só se assume pedido pendente, que não tem responsável.
 - **Compartilhar localização**: o operador ou o admin master repassa a localização do pedido a um voluntário, para que ele vá ao local. A ação aparece no card do pedido em qualquer status.
   - Ao clicar, um link que abre o local do pedido num mapa, a partir das coordenadas do pedido, é copiado para a área de transferência, e uma confirmação visual informa que a localização foi copiada.
   - A ação sempre copia o link: ela não abre o menu de compartilhamento do dispositivo.
@@ -212,6 +223,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 
 - Área autenticada para os próprios resgatistas em campo atualizarem o status dos resgates diretamente. Está prevista como evolução futura, não faz parte do MVP.
 - Editar, incluir ou apagar a observação de um pedido depois de concluído; observação nas ações de assumir e cancelar; exibir a observação no hover do mapa. Fora do escopo por decisão do PO: a observação é definida uma única vez, junto com a conclusão, e só é consultada no card e no log.
+- Transferir um pedido entre operadores sem concluí-lo ou cancelá-lo, e bloquear a ação de quem não é o responsável. Fora do escopo por decisão do PO: qualquer operador pode agir no pedido de outro, mediante aviso e confirmação.
 - Conferir se o total de pessoas é coerente com a soma das categorias (homens, mulheres, crianças, idosos). Fora do escopo por decisão do PO: em uma emergência, a pessoa pode conhecer só parte das categorias ou estimar o total.
 - Compartilhar a localização pelo menu de compartilhamento do dispositivo (por exemplo, no celular). Fora do escopo por decisão do PO: a ação "Compartilhar localização" sempre copia o link da localização.
 
@@ -238,7 +250,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - Status (Pendente, Em resgate, Concluído, Cancelado).
 - Motivo do cancelamento (obrigatório apenas quando o status é Cancelado).
 - Observação da conclusão (opcional, até 1000 caracteres; só existe quando o status é Concluído).
-- Operador responsável (quando assumido).
+- Operador responsável (quem assumiu o pedido; passa a ser quem o concluir ou cancelar, quando for outra pessoa).
 - Timestamps de criação/atualização.
 
 ### `rescue_status_logs`

@@ -96,8 +96,10 @@ Todos os fluxos abaixo já têm spec (rastreabilidade cenário a cenário em
    mapa/lista, filtros, ordenação) e `panel-pagination.spec.ts` — paginação da lista
    (quantidade por página, troca de página, mapa da página aberta, volta à primeira página).
    Os testes de ordenação percorrem as páginas pelo helper `fixtures/panel-pages.ts`.
-4. `panel-status-management.spec.ts` — assumir/concluir/cancelar pedido, compartilhar
-   localização, fluxo ponta a ponta do painel.
+   `panel-my-requests.spec.ts` — filtro "Meus pedidos" (cada teste usa um operador novo, para
+   o filtro mostrar só o que o teste criou).
+4. `panel-status-management.spec.ts` — assumir/concluir/cancelar pedido, aviso de pedido de
+   outro operador, compartilhar localização, fluxo ponta a ponta do painel.
 5. `operators.spec.ts` e `panel-navigation.spec.ts` — gestão de operadores (admin master)
    e navegação condicional por papel.
 6. `rescue-status-logs.spec.ts` — tela de logs de auditoria (admin master).

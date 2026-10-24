@@ -193,6 +193,66 @@ class RescueRequestListingFiltersTest extends TestCase
         $response->assertJsonPath('data.2.total_people', null);
     }
 
+    public function test_mine_filter_lists_only_requests_whose_responsible_is_the_authenticated_user(): void
+    {
+        $operator = User::factory()->create();
+        $other = User::factory()->create();
+        RescueRequest::factory()->create();
+        $inProgress = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+        $concluded = RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido, 'operator_id' => $operator->id]);
+        $cancelled = RescueRequest::factory()->create(['status' => RescueRequestStatus::Cancelado, 'operator_id' => $operator->id]);
+        RescueRequest::factory()->emResgate()->create(['operator_id' => $other->id]);
+
+        $response = $this->actingAs($operator)->getJson('/api/rescue-requests?mine=1');
+
+        $response->assertOk();
+        $response->assertJsonCount(3, 'data');
+        $this->assertEqualsCanonicalizing(
+            [$inProgress->id, $concluded->id, $cancelled->id],
+            collect($response->json('data'))->pluck('id')->all()
+        );
+        $response->assertJsonPath('meta.total', 3);
+    }
+
+    public function test_listing_without_the_mine_filter_lists_requests_of_every_operator(): void
+    {
+        $operator = User::factory()->create();
+        $other = User::factory()->create();
+        RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+        RescueRequest::factory()->emResgate()->create(['operator_id' => $other->id]);
+        RescueRequest::factory()->create();
+
+        $response = $this->actingAs($operator)->getJson('/api/rescue-requests?mine=0');
+
+        $response->assertOk();
+        $response->assertJsonCount(3, 'data');
+    }
+
+    public function test_mine_filter_combines_with_the_status_filter(): void
+    {
+        $operator = User::factory()->create();
+        RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+        RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido, 'operator_id' => $operator->id]);
+        RescueRequest::factory()->emResgate()->create();
+
+        $response = $this->actingAs($operator)->getJson('/api/rescue-requests?mine=1&status=em_resgate');
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.status', RescueRequestStatus::EmResgate->value);
+        $response->assertJsonPath('data.0.operator.id', $operator->id);
+    }
+
+    public function test_mine_filter_rejects_a_value_that_is_not_boolean(): void
+    {
+        $operator = User::factory()->create();
+
+        $response = $this->actingAs($operator)->getJson('/api/rescue-requests?mine=talvez');
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['mine']);
+    }
+
     public function test_rescue_request_listing_requires_authentication(): void
     {
         $this->getJson('/api/rescue-requests?per_page=10')->assertUnauthorized();

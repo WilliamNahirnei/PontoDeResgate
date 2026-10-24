@@ -61,6 +61,7 @@ class RescueRequestService
 
     /**
      * Mark a rescue request that is currently "em_resgate" as "concluido", recording the optional note.
+     * The operator who concludes it becomes the request's responsible operator.
      *
      * @throws HttpException When the request is not in progress (409).
      */
@@ -75,12 +76,13 @@ class RescueRequestService
             [RescueRequestStatus::EmResgate],
             'Este pedido foi alterado por outro operador.',
             RescueRequestStatus::Concluido,
-            $note === '' ? [] : ['completion_note' => $note],
+            ['operator_id' => $operator->id, ...($note === '' ? [] : ['completion_note' => $note])],
         );
     }
 
     /**
      * Cancel a rescue request that has not yet been finalized, recording the given reason.
+     * The operator who cancels it becomes the request's responsible operator.
      *
      * @throws HttpException When the request is already concluído/cancelado (409).
      */
@@ -92,7 +94,7 @@ class RescueRequestService
             [RescueRequestStatus::Pendente, RescueRequestStatus::EmResgate],
             'Este pedido foi alterado por outro operador.',
             RescueRequestStatus::Cancelado,
-            ['cancellation_reason' => $reason],
+            ['operator_id' => $operator->id, 'cancellation_reason' => $reason],
         );
     }
 

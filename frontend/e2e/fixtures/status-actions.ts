@@ -28,10 +28,23 @@ export async function holdStatusAction(page: Page, rescueRequestId: number, acti
   }
 }
 
+type DialogOptions = {
+  // O pedido é de outro operador: confirma o aviso antes do diálogo da ação.
+  ofAnotherOperator?: boolean
+}
+
+// Confirma o aviso de que o pedido é de outro operador.
+export async function confirmOtherOperatorWarning(page) {
+  await page.getByRole('dialog').filter({ hasText: 'Pedido de outro operador' }).getByRole('button', { name: 'Continuar' }).click()
+}
+
 // Conclui o pedido pelo diálogo de observação: abre com "Concluir", preenche a
 // observação (opcional) e confirma.
-export async function completeThroughDialog(page: Page, rescueCard: Locator, note?: string) {
+export async function completeThroughDialog(page: Page, rescueCard: Locator, note?: string, options: DialogOptions = {}) {
   await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+  if (options.ofAnotherOperator) {
+    await confirmOtherOperatorWarning(page)
+  }
   if (note !== undefined) {
     await page.getByLabel('Observação da conclusão').fill(note)
   }

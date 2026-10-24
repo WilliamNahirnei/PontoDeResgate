@@ -125,9 +125,11 @@ test.describe('Painel — filtros e ordenação', () => {
     await page.getByRole('option', { name: 'Total de pessoas' }).click()
     await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
     await page.getByLabel('Mín. total de pessoas').fill(String(base))
+    // Em ordem crescente o pedido de menor quantidade é o primeiro do filtro; na
+    // decrescente (a ordem de abertura) ele pode cair depois da primeira página.
+    await page.locator('button:has(i.mdi-sort-ascending)').click()
     await expect(card(page, low.name)).toBeVisible()
     await showOneHundredPerPage(page)
-    await page.locator('button:has(i.mdi-sort-ascending)').click()
 
     await expect(async () => {
       const text = await readAllPagesText(page)
@@ -151,15 +153,21 @@ test.describe('Painel — filtros e ordenação', () => {
     request,
     loginAsAdminMaster,
   }) => {
-    // Percorre todas as páginas do banco compartilhado, nas duas direções.
-    test.setTimeout(180_000)
+    // Percorre as páginas do resultado filtrado, nas duas direções.
+    test.setTimeout(90_000)
     await loginAsAdminMaster()
     const unique = Date.now()
-    const older = await createRescueRequest(request, { requester_name: `E2E Ordem Data Antigo ${unique}` })
+    // Os dois pedidos têm a mesma quantidade de animais, alta e própria deste teste:
+    // com o filtro de mínimo de animais, o banco compartilhado (com páginas e mais
+    // páginas de pedidos) deixa na lista só os poucos pedidos como eles.
+    const animals = 500 + (unique % 400)
+    const older = await createRescueRequest(request, { requester_name: `E2E Ordem Data Antigo ${unique}`, animals_count: animals })
     await waitForNextSecond()
-    const newer = await createRescueRequest(request, { requester_name: `E2E Ordem Data Recente ${unique}` })
+    const newer = await createRescueRequest(request, { requester_name: `E2E Ordem Data Recente ${unique}`, animals_count: animals })
 
     await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByLabel('Mín. animais').fill(String(animals))
     await expect(card(page, newer.requester_name)).toBeVisible()
     await showOneHundredPerPage(page)
 
@@ -292,18 +300,26 @@ test.describe('Painel — filtros e ordenação', () => {
     request,
     loginAsAdminMaster,
   }) => {
-    // Percorre todas as páginas do banco compartilhado, nas duas direções.
-    test.setTimeout(180_000)
+    // Percorre as páginas do resultado filtrado, nas duas direções.
+    test.setTimeout(90_000)
     await loginAsAdminMaster()
     const unique = Date.now()
     const three = `E2E Nulos Tres ${unique}`
     const seven = `E2E Nulos Sete ${unique}`
     const missing = `E2E Nulos Sem Total ${unique}`
-    await createRescueRequest(request, { requester_name: three, total_people: 3 })
-    await createRescueRequest(request, { requester_name: missing })
-    await createRescueRequest(request, { requester_name: seven, total_people: 7 })
+    // Os três pedidos têm a mesma quantidade de animais, alta e própria deste teste:
+    // com o filtro de mínimo de animais, o banco compartilhado (com páginas e mais
+    // páginas de pedidos) deixa na lista só estes poucos, e a ordenação é conferida
+    // entre eles; o pedido sem total fica na última página.
+    const animals = 500 + (unique % 400)
+    await createRescueRequest(request, { requester_name: three, total_people: 3, animals_count: animals })
+    await createRescueRequest(request, { requester_name: missing, animals_count: animals })
+    await createRescueRequest(request, { requester_name: seven, total_people: 7, animals_count: animals })
 
     await page.goto('/painel')
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByLabel('Mín. animais').fill(String(animals))
+    await expect(card(page, missing)).toBeVisible()
     await showOneHundredPerPage(page)
     await selectOption(page, 'Ordenar por', 'Total de pessoas')
 
@@ -414,9 +430,14 @@ test.describe('Painel — filtros e ordenação', () => {
     // na primeira página depois de reordenar, a quantidade é alta e própria deste
     // teste e um filtro de mínimo deixa na lista só os poucos pedidos como ele.
     const total = 500 + (Date.now() % 400)
+    // A quantidade de animais, também alta e própria deste teste, mantém o pedido na
+    // primeira página mesmo em ordem decrescente: poucos pedidos do banco
+    // compartilhado têm as duas quantidades altas.
+    const animals = 500 + (Date.now() % 400)
     const rescueRequest = await createRescueRequest(request, {
       requester_name: `E2E Ordenacao Mapa ${Date.now()}`,
       total_people: total,
+      animals_count: animals,
       ...randomCoordinates(),
     })
 
@@ -424,6 +445,7 @@ test.describe('Painel — filtros e ordenação', () => {
 
     await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
     await page.getByLabel('Mín. total de pessoas').fill(String(total))
+    await page.getByLabel('Mín. animais').fill(String(animals))
     const marker = page.getByTestId(`rescue-request-marker-${rescueRequest.id}`)
     await expect(marker).toBeVisible()
     const positionBefore = await stableBoundingBox(marker)

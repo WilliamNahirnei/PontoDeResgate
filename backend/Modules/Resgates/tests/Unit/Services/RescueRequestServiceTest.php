@@ -206,6 +206,7 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
             ->with($rescueRequest, [
+                'operator_id' => $operator->id,
                 'cancellation_reason' => 'Solicitante desistiu.',
                 'status' => RescueRequestStatus::Cancelado,
             ])
@@ -313,7 +314,7 @@ class RescueRequestServiceTest extends TestCase
 
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
-            ->with($rescueRequest, ['status' => RescueRequestStatus::Concluido])
+            ->with($rescueRequest, ['operator_id' => $completingOperator->id, 'status' => RescueRequestStatus::Concluido])
             ->andReturn($rescueRequest);
 
         $rescueRequests->shouldReceive('freshWithOperator')
@@ -378,6 +379,7 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
             ->with($rescueRequest, [
+                'operator_id' => $operator->id,
                 'cancellation_reason' => 'Equipe sem acesso ao local.',
                 'status' => RescueRequestStatus::Cancelado,
             ])
@@ -562,6 +564,7 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
             ->with($rescueRequest, [
+                'operator_id' => $operator->id,
                 'completion_note' => 'Família resgatada em segurança.',
                 'status' => RescueRequestStatus::Concluido,
             ])
@@ -584,7 +587,7 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequests->shouldReceive('findForUpdate')->once()->andReturn($rescueRequest);
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
-            ->with($rescueRequest, ['completion_note' => 'Tudo certo.', 'status' => RescueRequestStatus::Concluido])
+            ->with($rescueRequest, ['operator_id' => $operator->id, 'completion_note' => 'Tudo certo.', 'status' => RescueRequestStatus::Concluido])
             ->andReturn($rescueRequest);
         $rescueRequests->shouldReceive('freshWithOperator')->once()->andReturn($rescueRequest);
         $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));
@@ -618,7 +621,7 @@ class RescueRequestServiceTest extends TestCase
         $rescueRequests->shouldReceive('findForUpdate')->once()->andReturn($rescueRequest);
         $rescueRequests->shouldReceive('updateStatus')
             ->once()
-            ->with($rescueRequest, ['status' => RescueRequestStatus::Concluido])
+            ->with($rescueRequest, ['operator_id' => $operator->id, 'status' => RescueRequestStatus::Concluido])
             ->andReturn($rescueRequest);
         $rescueRequests->shouldReceive('freshWithOperator')->once()->andReturn($rescueRequest);
         $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));

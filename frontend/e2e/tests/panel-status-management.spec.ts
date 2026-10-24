@@ -1,7 +1,7 @@
 import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
-import { createOperator, loginViaApi } from '../fixtures/operators'
-import { completeThroughDialog, holdStatusAction } from '../fixtures/status-actions'
+import { adminMasterToken, createOperator, loginViaApi } from '../fixtures/operators'
+import { completeThroughDialog, confirmOtherOperatorWarning, holdStatusAction } from '../fixtures/status-actions'
 
 function card(page, name: string) {
   return page.locator('.rescue-requests-list .v-card', { hasText: name })
@@ -49,8 +49,11 @@ async function openPanelAsAnotherOperator(browser, request) {
   return { operator, context, operatorPage }
 }
 
-async function cancelThroughDialog(page, rescueCard, reason: string) {
+async function cancelThroughDialog(page, rescueCard, reason: string, options: { ofAnotherOperator?: boolean } = {}) {
   await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+  if (options.ofAnotherOperator) {
+    await confirmOtherOperatorWarning(page)
+  }
   await page.getByLabel('Motivo do cancelamento').fill(reason)
   await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
 }
@@ -391,7 +394,7 @@ test.describe('Painel — gestão de status do pedido', () => {
 
     const rescueCard = card(page, rescueRequest.requester_name)
     await expect(rescueCard).toContainText(`Operador responsável: ${otherOperator.name}`)
-    await completeThroughDialog(page, rescueCard)
+    await completeThroughDialog(page, rescueCard, undefined, { ofAnotherOperator: true })
 
     await expect(rescueCard.getByText('Concluído')).toBeVisible()
   })
@@ -411,6 +414,7 @@ test.describe('Painel — gestão de status do pedido', () => {
     const rescueCard = card(page, rescueRequest.requester_name)
     await expect(rescueCard).toContainText(`Operador responsável: ${otherOperator.name}`)
     await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+    await confirmOtherOperatorWarning(page)
 
     const reason = `Cancelado por outro operador ${Date.now()}`
     await page.getByLabel('Motivo do cancelamento').fill(reason)
@@ -1016,22 +1020,24 @@ test.describe('Painel — gestão de status do pedido', () => {
       const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
       // A cancela o pedido que B vai tentar concluir.
       const operatorToCompleteCard = card(operatorPage, toComplete.requester_name)
-      await cancelThroughDialog(operatorPage, operatorToCompleteCard, 'Equipe não conseguiu chegar ao local.')
+      await cancelThroughDialog(operatorPage, operatorToCompleteCard, 'Equipe não conseguiu chegar ao local.', {
+        ofAnotherOperator: true,
+      })
       await expect(operatorToCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
 
-      await completeThroughDialog(page, toCompleteCard)
+      await completeThroughDialog(page, toCompleteCard, undefined, { ofAnotherOperator: true })
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
       await expect(toCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
 
       // A recusa acima recarrega a lista de B; só agora A conclui o pedido que B
       // vai tentar cancelar, para o card de B estar de fato desatualizado.
       const operatorToCancelCard = card(operatorPage, toCancel.requester_name)
-      await completeThroughDialog(operatorPage, operatorToCancelCard)
+      await completeThroughDialog(operatorPage, operatorToCancelCard, undefined, { ofAnotherOperator: true })
       await expect(operatorToCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Fechar' }).click()
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toHaveCount(0)
 
-      await cancelThroughDialog(page, toCancelCard, 'Tentativa de cancelar pedido já concluído.')
+      await cancelThroughDialog(page, toCancelCard, 'Tentativa de cancelar pedido já concluído.', { ofAnotherOperator: true })
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
       await expect(toCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
 
@@ -1050,11 +1056,12 @@ test.describe('Painel — gestão de status do pedido', () => {
       await page.goto('/painel')
       const rescueCard = card(page, rescueRequest.requester_name)
       await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+      await confirmOtherOperatorWarning(page)
       await page.getByLabel('Motivo do cancelamento').fill('Motivo digitado antes da mudança do outro operador.')
 
       const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
       const operatorCard = card(operatorPage, rescueRequest.requester_name)
-      await completeThroughDialog(operatorPage, operatorCard)
+      await completeThroughDialog(operatorPage, operatorCard, undefined, { ofAnotherOperator: true })
       await expect(operatorCard.getByText('Concluído', { exact: true })).toBeVisible()
 
       await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
@@ -1065,5 +1072,271 @@ test.describe('Painel — gestão de status do pedido', () => {
 
       await context.close()
     })
+  })
+})
+
+test.describe('pedido de outro operador', () => {
+  const OTHER_OPERATOR_TITLE = 'Pedido de outro operador'
+
+  const warning = (page) => page.getByRole('dialog').filter({ hasText: OTHER_OPERATOR_TITLE })
+
+  // O operador A assume o pedido por API e o operador B, de quem é a tela, o
+  // abre no painel. B é um operador novo, sem nenhum outro pedido.
+  async function openRequestOfAnotherOperator(page, request, label: string) {
+    const assigned = await createOperator(request)
+    const acting = await createOperator(request)
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Alheio ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume', assigned.token)
+    await injectSession(page, acting.token, acting.user)
+    await page.goto('/painel')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    await expect(rescueCard).toContainText(`Operador responsável: ${assigned.name}`)
+
+    return { assigned, acting, rescueRequest, rescueCard }
+  }
+
+  test('ao acionar Concluir num pedido Em resgate de outro operador, a tela avisa que o pedido é de outro operador, mostra o nome do responsável e pede confirmação antes do diálogo de observação', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Concluir')
+
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+
+    await expect(warning(page)).toBeVisible()
+    await expect(warning(page)).toContainText(assigned.name)
+    await expect(page.getByLabel('Observação da conclusão')).toHaveCount(0)
+  })
+
+  test('confirmar o aviso de pedido de outro operador abre o diálogo de observação, e concluir deixa o pedido Concluído', async ({
+    page,
+    request,
+  }) => {
+    const { rescueCard } = await openRequestOfAnotherOperator(page, request, 'Concluir Confirma')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+
+    await warning(page).getByRole('button', { name: 'Continuar' }).click()
+
+    await expect(warning(page)).toHaveCount(0)
+    await expect(page.getByLabel('Observação da conclusão')).toBeVisible()
+    await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+  })
+
+  test('desistir do aviso ao concluir pedido de outro operador não altera o pedido: continua Em resgate, com o responsável original', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Concluir Desiste')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+
+    await warning(page).getByRole('button', { name: 'Voltar' }).click()
+
+    await expect(warning(page)).toHaveCount(0)
+    await expect(page.getByLabel('Observação da conclusão')).toHaveCount(0)
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Operador responsável: ${assigned.name}`)
+    await expect(rescueCard.getByRole('button', { name: 'Concluir' })).toBeVisible()
+  })
+
+  test('ao acionar Cancelar num pedido Em resgate de outro operador, a tela avisa que o pedido é de outro operador, mostra o nome do responsável e pede confirmação antes do diálogo do motivo', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Cancelar')
+
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+
+    await expect(warning(page)).toBeVisible()
+    await expect(warning(page)).toContainText(assigned.name)
+    await expect(page.getByLabel('Motivo do cancelamento')).toHaveCount(0)
+  })
+
+  test('confirmar o aviso de pedido de outro operador abre o diálogo do motivo, e cancelar deixa o pedido Cancelado', async ({
+    page,
+    request,
+  }) => {
+    const { rescueCard } = await openRequestOfAnotherOperator(page, request, 'Cancelar Confirma')
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+
+    await warning(page).getByRole('button', { name: 'Continuar' }).click()
+
+    await expect(warning(page)).toHaveCount(0)
+    await page.getByLabel('Motivo do cancelamento').fill('Equipe sem acesso ao local.')
+    await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+  })
+
+  test('desistir do aviso ao cancelar pedido de outro operador não altera o pedido: continua Em resgate, com o responsável original', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Cancelar Desiste')
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+
+    await warning(page).getByRole('button', { name: 'Voltar' }).click()
+
+    await expect(warning(page)).toHaveCount(0)
+    await expect(page.getByLabel('Motivo do cancelamento')).toHaveCount(0)
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Operador responsável: ${assigned.name}`)
+  })
+
+  test('concluir ou cancelar um pedido do próprio operador não mostra o aviso: abre direto o diálogo de observação ou do motivo', async ({
+    page,
+    request,
+  }) => {
+    const operator = await createOperator(request)
+    await injectSession(page, operator.token, operator.user)
+    const toComplete = await createRescueRequest(request, { requester_name: `E2E Proprio Concluir ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    const toCancel = await createRescueRequest(request, { requester_name: `E2E Proprio Cancelar ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await changeRescueRequestStatus(request, toComplete.id, 'assume', operator.token)
+    await changeRescueRequestStatus(request, toCancel.id, 'assume', operator.token)
+    await page.goto('/painel')
+    await expect(card(page, toComplete.requester_name)).toContainText(`Operador responsável: ${operator.name}`)
+
+    await card(page, toComplete.requester_name).getByRole('button', { name: 'Concluir' }).click()
+    await expect(page.getByLabel('Observação da conclusão')).toBeVisible()
+    await expect(warning(page)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Voltar' }).click()
+
+    await card(page, toCancel.requester_name).getByRole('button', { name: 'Cancelar' }).click()
+    await expect(page.getByLabel('Motivo do cancelamento')).toBeVisible()
+    await expect(warning(page)).toHaveCount(0)
+  })
+
+  test('cancelar um pedido Pendente, que não tem responsável, não mostra o aviso: abre direto o diálogo do motivo', async ({
+    page,
+    request,
+    loginAsNewOperator,
+  }) => {
+    await loginAsNewOperator()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Alheio Pendente ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await page.goto('/painel')
+
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Cancelar' }).click()
+
+    await expect(page.getByLabel('Motivo do cancelamento')).toBeVisible()
+    await expect(warning(page)).toHaveCount(0)
+  })
+
+  test('assumir um pedido Pendente não mostra o aviso de pedido de outro operador', async ({
+    page,
+    request,
+    loginAsNewOperator,
+  }) => {
+    await loginAsNewOperator()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Alheio Assumir ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await page.goto('/painel')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await rescueCard.getByRole('button', { name: 'Assumir' }).click()
+
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    await expect(warning(page)).toHaveCount(0)
+  })
+
+  test('depois que o operador B conclui o pedido que o operador A assumiu, o card do pedido passa a mostrar B como responsável', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, acting, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Troca Concluir')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+    await warning(page).getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Operador responsável: ${acting.name}`)
+    await expect(rescueCard).not.toContainText(assigned.name)
+  })
+
+  test('depois que o operador B cancela o pedido Em resgate que o operador A assumiu, o card do pedido passa a mostrar B como responsável', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, acting, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Troca Cancelar')
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+    await warning(page).getByRole('button', { name: 'Continuar' }).click()
+    await page.getByLabel('Motivo do cancelamento').fill('Equipe sem acesso ao local.')
+    await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Operador responsável: ${acting.name}`)
+    await expect(rescueCard).not.toContainText(assigned.name)
+  })
+
+  test('depois que um operador cancela um pedido Pendente, o card do pedido passa a mostrar esse operador como responsável', async ({
+    page,
+    request,
+  }) => {
+    const operator = await createOperator(request)
+    await injectSession(page, operator.token, operator.user)
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Troca Pendente ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await page.goto('/painel')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    await expect(rescueCard.getByText('Pendente', { exact: true })).toBeVisible()
+    await expect(rescueCard).not.toContainText('Operador responsável')
+
+    await rescueCard.getByRole('button', { name: 'Cancelar' }).click()
+    await page.getByLabel('Motivo do cancelamento').fill('Pedido duplicado.')
+    await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()
+
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Operador responsável: ${operator.name}`)
+  })
+
+  test('o aviso de pedido de outro operador também aparece para o admin master que conclui ou cancela um pedido de operador', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const assigned = await createOperator(request)
+    const toComplete = await createRescueRequest(request, { requester_name: `E2E Admin Concluir ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    const toCancel = await createRescueRequest(request, { requester_name: `E2E Admin Cancelar ${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    await changeRescueRequestStatus(request, toComplete.id, 'assume', assigned.token)
+    await changeRescueRequestStatus(request, toCancel.id, 'assume', assigned.token)
+    await page.goto('/painel')
+
+    await card(page, toComplete.requester_name).getByRole('button', { name: 'Concluir' }).click()
+    await expect(warning(page)).toContainText(assigned.name)
+    await warning(page).getByRole('button', { name: 'Voltar' }).click()
+
+    await card(page, toCancel.requester_name).getByRole('button', { name: 'Cancelar' }).click()
+    await expect(warning(page)).toContainText(assigned.name)
+  })
+
+  test('com o aviso de pedido de outro operador aberto, se o pedido muda de status por outra sessão, concluir mostra a mensagem de pedido alterado por outro operador e o painel atualiza o pedido', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueRequest, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Conflito')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+    await expect(warning(page)).toBeVisible()
+
+    await changeRescueRequestStatus(request, rescueRequest.id, 'cancel', assigned.token)
+
+    await warning(page).getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
+
+    await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
+    await expect(rescueCard.getByText('Cancelado', { exact: true })).toBeVisible()
+  })
+
+  test('se o operador responsável foi desativado, o aviso de pedido de outro operador ainda mostra o nome dele', async ({
+    page,
+    request,
+  }) => {
+    const { assigned, rescueCard } = await openRequestOfAnotherOperator(page, request, 'Desativado')
+    const deactivated = await request.post(`${API_BASE_URL}/api/operators/${assigned.id}/deactivate`, {
+      headers: { Authorization: `Bearer ${await adminMasterToken(request)}` },
+    })
+    expect(deactivated.ok()).toBeTruthy()
+    await page.getByRole('button', { name: 'Atualizar' }).click()
+    await expect(rescueCard).toContainText(`Operador responsável: ${assigned.name}`)
+
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+
+    await expect(warning(page)).toContainText(assigned.name)
   })
 })
