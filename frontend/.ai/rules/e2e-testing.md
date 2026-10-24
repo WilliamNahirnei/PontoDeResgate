@@ -93,7 +93,9 @@ Todos os fluxos abaixo já têm spec (rastreabilidade cenário a cenário em
 2. `public-request.spec.ts` — fluxo público crítico do produto (mapa Leaflet via
    `LocationPickerMap.vue`, incluindo geolocalização automática).
 3. `panel-viewing.spec.ts` e `panel-filters-sorting.spec.ts` — painel (visualização no
-   mapa/lista, filtros, ordenação).
+   mapa/lista, filtros, ordenação) e `panel-pagination.spec.ts` — paginação da lista
+   (quantidade por página, troca de página, mapa da página aberta, volta à primeira página).
+   Os testes de ordenação percorrem as páginas pelo helper `fixtures/panel-pages.ts`.
 4. `panel-status-management.spec.ts` — assumir/concluir/cancelar pedido, compartilhar
    localização, fluxo ponta a ponta do painel.
 5. `operators.spec.ts` e `panel-navigation.spec.ts` — gestão de operadores (admin master)

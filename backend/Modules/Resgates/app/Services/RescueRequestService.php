@@ -2,7 +2,7 @@
 
 namespace Modules\Resgates\Services;
 
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Modules\Resgates\Enums\RescueRequestStatus;
 use Modules\Resgates\Models\RescueRequest;
@@ -32,14 +32,14 @@ class RescueRequestService
     }
 
     /**
-     * List rescue requests matching the given filters, sorted by the given column/direction.
+     * List a page of rescue requests matching the given filters, sorted by the given column/direction.
      *
      * @param  array<string, mixed>  $filters
-     * @return Collection<int, RescueRequest>
+     * @return LengthAwarePaginator<int, RescueRequest>
      */
-    public function list(array $filters, string $sortBy, string $sortDirection): Collection
+    public function list(array $filters, string $sortBy, string $sortDirection, int $perPage): LengthAwarePaginator
     {
-        return $this->rescueRequests->listWithFilters($filters, $sortBy, $sortDirection);
+        return $this->rescueRequests->paginateWithFilters($filters, $sortBy, $sortDirection, $perPage);
     }
 
     /**

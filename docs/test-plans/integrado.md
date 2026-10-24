@@ -27,7 +27,7 @@
 | §1.3 Título da aba | Usuarios + Resgates | E2E | Implementado | CRZ-18 |
 | §2 Papéis de usuário / autenticação | Usuarios | E2E | Parcial — conteúdo da tela de login (USR-100) Planejado | USR-18–USR-22, USR-61, USR-70, USR-79, USR-80, USR-92–USR-100 |
 | §3 Tela pública de pedido | Resgates | E2E | Implementado | RES-14–RES-16, RES-79–RES-81, RES-102, RES-103, RES-125, RES-172–RES-181, RES-187 |
-| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161, RES-188, RES-190–RES-195 |
+| §4.1 Visualização de pedidos (painel) | Resgates | E2E | Parcial — "Limpar filtros" voltando status e ordenação (RES-145) e rolagem da lista até o card (RES-149) Não implementados | RES-39–RES-45, RES-109–RES-115, RES-122–RES-124, RES-145–RES-153, RES-159–RES-161, RES-188, RES-190–RES-213 |
 | §4.2 Gestão de status do pedido | Resgates | E2E | Parcial — observação ao concluir (diálogo, opcional, limite de 1000, card, negativos) Não implementada (RES-130–RES-141) | RES-58–RES-61, RES-99, RES-116–RES-118, RES-126–RES-141, RES-154, RES-155, RES-162–RES-168, RES-170, RES-171, RES-182–RES-185 |
 | §4.3 Log de operações | Resgates + Usuarios | E2E | Implementado | RES-157, RES-158, RES-169, CRZ-10, CRZ-11 |
 | §4.4 Consulta de logs de operações | Resgates + Usuarios | E2E | Parcial — observação da conclusão na entrada de log (RES-142–RES-144) Não implementada | RES-69, RES-120, RES-142–RES-144, RES-186, RES-189, CRZ-04, CRZ-06 |
@@ -60,11 +60,11 @@
 
 | Status | Usuarios | Resgates | Cross-module | Total |
 |---|---|---|---|---|
-| Implementado | 40 | 89 | 12 | 141 |
+| Implementado | 40 | 107 | 12 | 159 |
 | Planejado | 1 | 0 | 0 | 1 |
 | Não coberto | 0 | 0 | 0 | 0 |
 | Não implementado | 0 | 17 | 1 | 18 |
-| **Total de cenários** | **41** | **106** | **13** | **160** |
+| **Total de cenários** | **41** | **124** | **13** | **178** |
 
 > Esta tabela é um retrato do momento em que o test plan foi escrito/atualizado pela
 > última vez — não é gerada automaticamente. Ao editar qualquer cenário em `usuarios.md`

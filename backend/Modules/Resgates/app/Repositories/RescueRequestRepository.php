@@ -2,8 +2,8 @@
 
 namespace Modules\Resgates\Repositories;
 
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Resgates\Models\RescueRequest;
 use Modules\Resgates\Repositories\Contracts\RescueRequestRepositoryInterface;
 
@@ -34,12 +34,12 @@ class RescueRequestRepository implements RescueRequestRepositoryInterface
     }
 
     /**
-     * List rescue requests matching the given filters, sorted by the given column/direction.
+     * Paginate rescue requests matching the given filters, sorted by the given column/direction.
      *
      * @param  array<string, mixed>  $filters
-     * @return Collection<int, RescueRequest>
+     * @return LengthAwarePaginator<int, RescueRequest>
      */
-    public function listWithFilters(array $filters, string $sortBy, string $sortDirection): Collection
+    public function paginateWithFilters(array $filters, string $sortBy, string $sortDirection, int $perPage): LengthAwarePaginator
     {
         $query = RescueRequest::query()
             ->with('operator')
@@ -62,7 +62,10 @@ class RescueRequestRepository implements RescueRequestRepositoryInterface
             // independente da direção escolhida para a ordenação.
             ->orderByRaw("{$sortBy} IS NULL")
             ->orderBy($sortBy, $sortDirection)
-            ->get();
+            // Desempate pelo id: sem ele, pedidos com o mesmo valor de ordenação
+            // podem repetir ou sumir na troca de página.
+            ->orderBy('id', $sortDirection)
+            ->paginate($perPage);
     }
 
     /**

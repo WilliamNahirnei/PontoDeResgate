@@ -2,7 +2,7 @@
 
 namespace Modules\Resgates\Repositories\Contracts;
 
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Resgates\Models\RescueRequest;
 
 interface RescueRequestRepositoryInterface
@@ -15,14 +15,15 @@ interface RescueRequestRepositoryInterface
     public function create(array $attributes): RescueRequest;
 
     /**
-     * List rescue requests matching the given filters, sorted by the given column/direction.
+     * Paginate rescue requests matching the given filters, sorted by the given column/direction.
      *
-     * Requests missing the sorted column are always listed last, regardless of direction.
+     * Requests missing the sorted column are always listed last (of the whole list, not of
+     * each page), regardless of direction. The page is read from the current request.
      *
      * @param  array<string, mixed>  $filters  Accepts "status" and the "min_<column>" quantity filters.
-     * @return Collection<int, RescueRequest>
+     * @return LengthAwarePaginator<int, RescueRequest>
      */
-    public function listWithFilters(array $filters, string $sortBy, string $sortDirection): Collection;
+    public function paginateWithFilters(array $filters, string $sortBy, string $sortDirection, int $perPage): LengthAwarePaginator;
 
     /**
      * Reload the rescue request from the database, locking its row until the current

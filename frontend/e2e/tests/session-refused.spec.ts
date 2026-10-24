@@ -14,8 +14,14 @@ const USER_STORAGE_KEY = 'pontoderesgate.user'
 async function openPanelAsNewOperator(page, request) {
   const operator = await createOperator(request)
   await injectSession(page, operator.token, operator.user)
+  // Espera a primeira carga da lista: sem isso, a resposta dela (200) pode ser
+  // confundida com a da recusa que o teste provoca depois.
+  const firstLoad = page.waitForResponse(
+    (res) => new URL(res.url()).pathname === '/api/rescue-requests' && res.request().method() === 'GET',
+  )
   await page.goto('/painel')
   await expect(page.getByRole('heading', { name: 'Pedidos de resgate' })).toBeVisible()
+  await firstLoad
 
   return operator
 }

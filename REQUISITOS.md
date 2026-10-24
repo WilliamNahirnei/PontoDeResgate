@@ -100,7 +100,7 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Filtros**: os pedidos exibidos no mapa e na lista podem ser filtrados por:
   - Status: um status por vez ou todos. Ao abrir o painel, todos os status são exibidos.
   - Quantidade mínima de pessoas — total, homens, mulheres, crianças, idosos e animais.
-  - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima e a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo.
+  - Botão "Limpar filtros": volta o painel ao estado de abertura — todos os status, nenhuma quantidade mínima, a lista ordenada pela data/hora do pedido, do mais recente para o mais antigo, e na primeira página.
 - Com um filtro de quantidade mínima aplicado, só aparecem os pedidos em que essa quantidade foi informada e é igual ou maior que o mínimo; os pedidos em que ela não foi informada (campos opcionais no formulário público) não aparecem no mapa nem na lista.
 - Cada quantidade mínima, quando informada, é um número inteiro de **0 a 999**; deixada em branco, não filtra.
 - Quando o operador ou o admin master informa uma quantidade mínima inválida (acima de 999, negativa ou com casas decimais), o próprio campo mostra a mensagem "Informe um número inteiro de 0 a 999", e o painel não mostra a mensagem de erro de carregamento dos pedidos.
@@ -109,7 +109,18 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Ordenação**: a lista pode ser ordenada pela data/hora do pedido ou por uma das quantidades (total, homens, mulheres, crianças, idosos, animais), em ordem crescente ou decrescente.
 - Ao abrir o painel, a lista vem ordenada pela data/hora do pedido, do mais recente para o mais antigo.
 - Ao ordenar por uma quantidade, os pedidos em que ela não foi informada ficam sempre no fim da lista, tanto na ordem crescente quanto na decrescente.
-- A ordenação altera apenas a lista; o mapa não muda.
+- A ordenação não reposiciona o mapa: um pedido que continua na página aberta fica no mesmo lugar. Como a ordenação leva a lista à primeira página, o mapa passa a mostrar os pedidos dessa página.
+- **Paginação**: a lista de pedidos do painel é paginada, para operador e admin master.
+- Ao abrir o painel pela primeira vez, a lista mostra a primeira página, com 50 pedidos por página.
+- O operador ou o admin master escolhe a quantidade de pedidos por página entre 5, 10, 20, 30, 50 e 100; não há outra opção.
+- A quantidade escolhida fica guardada no navegador: ao reabrir o painel, a lista vem com ela. Não havendo quantidade guardada, ou sendo ela inválida, vale 50.
+- A lista mostra a posição dos pedidos da página no total (ex.: "1-50 de 120") e permite ir para a página seguinte, a anterior, a primeira e a última; os botões de página seguinte e última ficam indisponíveis na última página, e os de página anterior e primeira, na primeira.
+- O mapa mostra somente os pedidos da página aberta, os mesmos da lista; ao trocar de página, o mapa passa a mostrar os da nova página, sem se reposicionar (o enquadramento automático acontece só na primeira carga).
+- Mudar o status, qualquer quantidade mínima, a ordenação ou a quantidade por página leva a lista de volta à primeira página.
+- "Limpar filtros" também leva a lista à primeira página, mas mantém a quantidade por página escolhida.
+- Assumir, concluir ou cancelar um pedido atualiza a página aberta, sem voltar à primeira.
+- A paginação respeita os filtros e a ordenação: o total e as páginas contam só os pedidos que atendem aos filtros, na ordem escolhida (os pedidos sem a quantidade informada continuam no fim da lista inteira, e não no fim de cada página).
+- Sem nenhum pedido que atenda aos filtros, a lista não mostra páginas além da primeira.
 
 ### 4.2 Gestão de status do pedido
 - **Assumir pedido**: altera o status para **"Em resgate"** e registra o operador responsável pelo atendimento.

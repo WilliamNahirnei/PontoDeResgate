@@ -30,7 +30,7 @@ class RescueRequestController extends Controller
     }
 
     /**
-     * List rescue requests, optionally filtered and sorted (authenticated operators only).
+     * List a page of rescue requests, optionally filtered and sorted (authenticated operators only).
      */
     public function index(IndexRescueRequestRequest $request): AnonymousResourceCollection
     {
@@ -38,6 +38,7 @@ class RescueRequestController extends Controller
             $request->validated(),
             $request->validated('sort_by', 'created_at'),
             $request->validated('sort_direction', 'desc'),
+            $request->validated('per_page') ?? IndexRescueRequestRequest::DEFAULT_PER_PAGE,
         );
 
         return RescueRequestResource::collection($rescueRequests);

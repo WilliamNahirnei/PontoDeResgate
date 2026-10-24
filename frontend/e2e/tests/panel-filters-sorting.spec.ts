@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
 import { randomCoordinates, stableBoundingBox } from '../fixtures/map'
+import { readAllPagesText, showOneHundredPerPage } from '../fixtures/panel-pages'
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 
@@ -14,9 +15,11 @@ function card(page, name: string) {
   return page.locator('.rescue-requests-list .v-card', { hasText: name })
 }
 
-// Posição de cada nome no texto da lista (-1 quando não aparece).
-async function listPositions(page, names: string[]) {
-  const text = await page.locator('.rescue-requests-list').innerText()
+// Posição de cada nome no texto da lista (-1 quando não aparece). Com
+// `allPages`, o texto é o da lista inteira, de todas as páginas, na ordem em
+// que os pedidos aparecem; sem ele, só o da página aberta.
+async function listPositions(page, names: string[], { allPages = false } = {}) {
+  const text = allPages ? await readAllPagesText(page) : await page.locator('.rescue-requests-list').innerText()
   return names.map((name) => text.indexOf(name))
 }
 
@@ -103,9 +106,13 @@ test.describe('Painel — filtros e ordenação', () => {
     await loginAsAdminMaster()
     const unique = Date.now()
 
-    const low = { name: `E2E Ordenacao Baixa ${unique}`, total_people: 1 }
-    const mid = { name: `E2E Ordenacao Media ${unique}`, total_people: 5 }
-    const high = { name: `E2E Ordenacao Alta ${unique}`, total_people: 9 }
+    // Quantidades altas e próprias deste teste, com um filtro de mínimo: o banco
+    // compartilhado tem páginas e mais páginas de pedidos, e a ordenação só pode
+    // ser conferida entre os poucos que sobram no filtro.
+    const base = 500 + (unique % 400)
+    const low = { name: `E2E Ordenacao Baixa ${unique}`, total_people: base }
+    const mid = { name: `E2E Ordenacao Media ${unique}`, total_people: base + 4 }
+    const high = { name: `E2E Ordenacao Alta ${unique}`, total_people: base + 8 }
 
     await createRescueRequest(request, { requester_name: low.name, total_people: low.total_people })
     await createRescueRequest(request, { requester_name: mid.name, total_people: mid.total_people })
@@ -116,10 +123,14 @@ test.describe('Painel — filtros e ordenação', () => {
     await page.getByRole('combobox', { name: 'Ordenar por' }).focus()
     await page.getByRole('combobox', { name: 'Ordenar por' }).press('Enter')
     await page.getByRole('option', { name: 'Total de pessoas' }).click()
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByLabel('Mín. total de pessoas').fill(String(base))
+    await expect(card(page, low.name)).toBeVisible()
+    await showOneHundredPerPage(page)
     await page.locator('button:has(i.mdi-sort-ascending)').click()
 
     await expect(async () => {
-      const text = await page.locator('.rescue-requests-list').innerText()
+      const text = await readAllPagesText(page)
       expect(text.indexOf(low.name)).toBeGreaterThanOrEqual(0)
       expect(text.indexOf(low.name)).toBeLessThan(text.indexOf(mid.name))
       expect(text.indexOf(mid.name)).toBeLessThan(text.indexOf(high.name))
@@ -128,7 +139,7 @@ test.describe('Painel — filtros e ordenação', () => {
     await page.locator('button:has(i.mdi-sort-descending)').click()
 
     await expect(async () => {
-      const text = await page.locator('.rescue-requests-list').innerText()
+      const text = await readAllPagesText(page)
       expect(text.indexOf(high.name)).toBeGreaterThanOrEqual(0)
       expect(text.indexOf(high.name)).toBeLessThan(text.indexOf(mid.name))
       expect(text.indexOf(mid.name)).toBeLessThan(text.indexOf(low.name))
@@ -140,6 +151,8 @@ test.describe('Painel — filtros e ordenação', () => {
     request,
     loginAsAdminMaster,
   }) => {
+    // Percorre todas as páginas do banco compartilhado, nas duas direções.
+    test.setTimeout(180_000)
     await loginAsAdminMaster()
     const unique = Date.now()
     const older = await createRescueRequest(request, { requester_name: `E2E Ordem Data Antigo ${unique}` })
@@ -148,17 +161,18 @@ test.describe('Painel — filtros e ordenação', () => {
 
     await page.goto('/painel')
     await expect(card(page, newer.requester_name)).toBeVisible()
+    await showOneHundredPerPage(page)
 
     await page.locator('button:has(i.mdi-sort-ascending)').click()
     await expect(async () => {
-      const [olderIndex, newerIndex] = await listPositions(page, [older.requester_name, newer.requester_name])
+      const [olderIndex, newerIndex] = await listPositions(page, [older.requester_name, newer.requester_name], { allPages: true })
       expect(olderIndex).toBeGreaterThanOrEqual(0)
       expect(olderIndex).toBeLessThan(newerIndex)
     }).toPass()
 
     await page.locator('button:has(i.mdi-sort-descending)').click()
     await expect(async () => {
-      const [olderIndex, newerIndex] = await listPositions(page, [older.requester_name, newer.requester_name])
+      const [olderIndex, newerIndex] = await listPositions(page, [older.requester_name, newer.requester_name], { allPages: true })
       expect(newerIndex).toBeGreaterThanOrEqual(0)
       expect(newerIndex).toBeLessThan(olderIndex)
     }).toPass()
@@ -278,6 +292,8 @@ test.describe('Painel — filtros e ordenação', () => {
     request,
     loginAsAdminMaster,
   }) => {
+    // Percorre todas as páginas do banco compartilhado, nas duas direções.
+    test.setTimeout(180_000)
     await loginAsAdminMaster()
     const unique = Date.now()
     const three = `E2E Nulos Tres ${unique}`
@@ -288,11 +304,12 @@ test.describe('Painel — filtros e ordenação', () => {
     await createRescueRequest(request, { requester_name: seven, total_people: 7 })
 
     await page.goto('/painel')
+    await showOneHundredPerPage(page)
     await selectOption(page, 'Ordenar por', 'Total de pessoas')
 
     await page.locator('button:has(i.mdi-sort-ascending)').click()
     await expect(async () => {
-      const [threeIndex, sevenIndex, missingIndex] = await listPositions(page, [three, seven, missing])
+      const [threeIndex, sevenIndex, missingIndex] = await listPositions(page, [three, seven, missing], { allPages: true })
       expect(threeIndex).toBeGreaterThanOrEqual(0)
       expect(threeIndex).toBeLessThan(sevenIndex)
       expect(sevenIndex).toBeLessThan(missingIndex)
@@ -300,7 +317,7 @@ test.describe('Painel — filtros e ordenação', () => {
 
     await page.locator('button:has(i.mdi-sort-descending)').click()
     await expect(async () => {
-      const [threeIndex, sevenIndex, missingIndex] = await listPositions(page, [three, seven, missing])
+      const [threeIndex, sevenIndex, missingIndex] = await listPositions(page, [three, seven, missing], { allPages: true })
       expect(sevenIndex).toBeGreaterThanOrEqual(0)
       expect(sevenIndex).toBeLessThan(threeIndex)
       expect(threeIndex).toBeLessThan(missingIndex)
@@ -379,6 +396,7 @@ test.describe('Painel — filtros e ordenação', () => {
     await page.goto('/painel')
 
     await expect(page.getByText('Data/hora do pedido')).toBeVisible()
+    await showOneHundredPerPage(page)
     await expect(async () => {
       const [olderIndex, newerIndex] = await listPositions(page, [older.requester_name, newer.requester_name])
       expect(newerIndex).toBeGreaterThanOrEqual(0)
@@ -386,20 +404,26 @@ test.describe('Painel — filtros e ordenação', () => {
     }).toPass()
   })
 
-  test('mudar a ordenação altera só a lista: os marcadores e a posição do mapa não mudam', async ({
+  test('mudar a ordenação não reposiciona o mapa: um pedido que continua na página aberta fica no mesmo lugar', async ({
     page,
     request,
     loginAsAdminMaster,
   }) => {
     await loginAsAdminMaster()
+    // O mapa mostra os pedidos da página aberta (§4.1): para o pedido continuar
+    // na primeira página depois de reordenar, a quantidade é alta e própria deste
+    // teste e um filtro de mínimo deixa na lista só os poucos pedidos como ele.
+    const total = 500 + (Date.now() % 400)
     const rescueRequest = await createRescueRequest(request, {
       requester_name: `E2E Ordenacao Mapa ${Date.now()}`,
-      total_people: 4,
+      total_people: total,
       ...randomCoordinates(),
     })
 
     await page.goto('/painel')
 
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByLabel('Mín. total de pessoas').fill(String(total))
     const marker = page.getByTestId(`rescue-request-marker-${rescueRequest.id}`)
     await expect(marker).toBeVisible()
     const positionBefore = await stableBoundingBox(marker)

@@ -2,7 +2,7 @@
 
 namespace Modules\Resgates\Tests\Unit\Services;
 
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Modules\Resgates\Enums\RescueRequestStatus;
@@ -230,24 +230,24 @@ class RescueRequestServiceTest extends TestCase
         $service->cancel($rescueRequest, $operator, 'Solicitante desistiu.');
     }
 
-    #[TestDox('list() deve repassar filtros, coluna e direção de ordenação ao Repository e devolver a coleção dele.')]
-    public function test_list_delegates_filters_and_sorting_to_the_repository(): void
+    #[TestDox('list() deve repassar filtros, ordenação e itens por página ao Repository e devolver a página dele.')]
+    public function test_list_delegates_filters_sorting_and_per_page_to_the_repository(): void
     {
-        $collection = new Collection;
+        $page = new LengthAwarePaginator([], 0, 20);
 
         $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
         $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
 
-        $rescueRequests->shouldReceive('listWithFilters')
+        $rescueRequests->shouldReceive('paginateWithFilters')
             ->once()
-            ->with(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc')
-            ->andReturn($collection);
+            ->with(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc', 20)
+            ->andReturn($page);
 
         $service = new RescueRequestService($rescueRequests, $statusLogs);
 
-        $result = $service->list(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc');
+        $result = $service->list(['status' => 'pendente', 'min_total_people' => 3], 'total_people', 'asc', 20);
 
-        $this->assertSame($collection, $result);
+        $this->assertSame($page, $result);
     }
 
     #[TestDox('assume() deve devolver o pedido recarregado pelo Repository.')]

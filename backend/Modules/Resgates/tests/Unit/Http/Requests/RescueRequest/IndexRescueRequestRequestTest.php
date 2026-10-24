@@ -160,4 +160,101 @@ class IndexRescueRequestRequestTest extends TestCase
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey($field, $validator->errors()->toArray());
     }
+
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function allowedPerPageValues(): array
+    {
+        return [
+            '5' => [5],
+            '10' => [10],
+            '20' => [20],
+            '30' => [30],
+            '50' => [50],
+            '100' => [100],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function invalidPerPageValues(): array
+    {
+        return [
+            'zero' => [0],
+            'negativo' => [-10],
+            'fora da lista' => [15],
+            'acima do máximo' => [101],
+            'texto' => ['muitos'],
+            'decimal' => [10.5],
+        ];
+    }
+
+    #[DataProvider('allowedPerPageValues')]
+    #[TestDox('A validação deve aceitar per_page igual a uma das quantidades permitidas (5, 10, 20, 30, 50 e 100).')]
+    public function test_per_page_accepts_the_allowed_values(int $perPage): void
+    {
+        $validator = Validator::make(['per_page' => $perPage], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertFalse($validator->fails());
+    }
+
+    #[DataProvider('invalidPerPageValues')]
+    #[TestDox('A validação deve rejeitar per_page fora da lista de quantidades permitidas.')]
+    public function test_per_page_rejects_values_outside_the_allowed_list(mixed $perPage): void
+    {
+        $validator = Validator::make(['per_page' => $perPage], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('per_page', $validator->errors()->toArray());
+    }
+
+    #[TestDox('A validação deve aceitar per_page e page ausentes ou nulos — a quantidade padrão é aplicada depois.')]
+    public function test_per_page_and_page_are_optional(): void
+    {
+        $validator = Validator::make(['per_page' => null, 'page' => null], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertFalse($validator->fails());
+    }
+
+    #[TestDox('A validação deve aceitar um número de página inteiro maior ou igual a 1.')]
+    public function test_page_accepts_positive_integers(): void
+    {
+        $validator = Validator::make(['page' => 3], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertFalse($validator->fails());
+    }
+
+    #[DataProvider('invalidPageValues')]
+    #[TestDox('A validação deve rejeitar um número de página que não seja inteiro maior ou igual a 1.')]
+    public function test_page_rejects_invalid_values(mixed $page): void
+    {
+        $validator = Validator::make(['page' => $page], (new IndexRescueRequestRequest)->rules());
+
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('page', $validator->errors()->toArray());
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function invalidPageValues(): array
+    {
+        return [
+            'zero' => [0],
+            'negativa' => [-1],
+            'texto' => ['abc'],
+            'decimal' => [1.5],
+        ];
+    }
+
+    #[TestDox('As regras devem manter per_page e page fora da lista de filtros de quantidade mínima.')]
+    public function test_pagination_params_are_not_quantity_filters(): void
+    {
+        $rules = (new IndexRescueRequestRequest)->rules();
+
+        $this->assertArrayHasKey('per_page', $rules);
+        $this->assertArrayHasKey('page', $rules);
+    }
 }

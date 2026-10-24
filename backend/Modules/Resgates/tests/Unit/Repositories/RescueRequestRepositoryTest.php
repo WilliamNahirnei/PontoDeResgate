@@ -66,72 +66,72 @@ class RescueRequestRepositoryTest extends TestCase
         $this->assertDatabaseHas('rescue_requests', ['id' => $rescueRequest->id]);
     }
 
-    #[TestDox('listWithFilters() deve carregar o relacionamento operator de cada pedido retornado.')]
-    public function test_list_with_filters_eager_loads_the_operator_relation(): void
+    #[TestDox('paginateWithFilters() deve carregar o relacionamento operator de cada pedido retornado.')]
+    public function test_paginate_with_filters_eager_loads_the_operator_relation(): void
     {
         RescueRequest::factory()->create();
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertTrue($results->first()->relationLoaded('operator'));
     }
 
-    #[TestDox('listWithFilters() deve filtrar pedidos pelo status informado.')]
-    public function test_list_with_filters_filters_by_status(): void
+    #[TestDox('paginateWithFilters() deve filtrar pedidos pelo status informado.')]
+    public function test_paginate_with_filters_filters_by_status(): void
     {
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido]);
 
-        $results = $this->repository->listWithFilters(['status' => RescueRequestStatus::Pendente->value], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['status' => RescueRequestStatus::Pendente->value], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertSame(RescueRequestStatus::Pendente, $results->first()->status);
     }
 
-    #[TestDox('listWithFilters() deve filtrar pedidos com quantidade mínima de pessoas.')]
-    public function test_list_with_filters_filters_by_minimum_quantity(): void
+    #[TestDox('paginateWithFilters() deve filtrar pedidos com quantidade mínima de pessoas.')]
+    public function test_paginate_with_filters_filters_by_minimum_quantity(): void
     {
         RescueRequest::factory()->create(['total_people' => 2]);
         RescueRequest::factory()->create(['total_people' => 10]);
 
-        $results = $this->repository->listWithFilters(['min_total_people' => 5], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['min_total_people' => 5], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertSame(10, $results->first()->total_people);
     }
 
-    #[TestDox('listWithFilters() não deve considerar um pedido sem a quantidade informada como atendendo a um filtro mínimo.')]
-    public function test_list_with_filters_excludes_requests_missing_the_filtered_quantity(): void
+    #[TestDox('paginateWithFilters() não deve considerar um pedido sem a quantidade informada como atendendo a um filtro mínimo.')]
+    public function test_paginate_with_filters_excludes_requests_missing_the_filtered_quantity(): void
     {
         RescueRequest::factory()->create(['total_people' => null]);
         RescueRequest::factory()->create(['total_people' => 10]);
 
-        $results = $this->repository->listWithFilters(['min_total_people' => 0], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['min_total_people' => 0], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertSame(10, $results->first()->total_people);
     }
 
-    #[TestDox('listWithFilters() deve ordenar pelos pedidos pela coluna e direção informadas.')]
-    public function test_list_with_filters_sorts_by_the_given_column_and_direction(): void
+    #[TestDox('paginateWithFilters() deve ordenar pelos pedidos pela coluna e direção informadas.')]
+    public function test_paginate_with_filters_sorts_by_the_given_column_and_direction(): void
     {
         RescueRequest::factory()->create(['total_people' => 5]);
         RescueRequest::factory()->create(['total_people' => 1]);
         RescueRequest::factory()->create(['total_people' => 10]);
 
-        $results = $this->repository->listWithFilters([], 'total_people', 'asc');
+        $results = $this->repository->paginateWithFilters([], 'total_people', 'asc', 50);
 
         $this->assertSame([1, 5, 10], $results->pluck('total_people')->all());
     }
 
-    #[TestDox('listWithFilters() deve listar por último os pedidos sem a coluna de ordenação preenchida, independente da direção.')]
-    public function test_list_with_filters_lists_requests_missing_the_sorted_column_last(): void
+    #[TestDox('paginateWithFilters() deve listar por último os pedidos sem a coluna de ordenação preenchida, independente da direção.')]
+    public function test_paginate_with_filters_lists_requests_missing_the_sorted_column_last(): void
     {
         RescueRequest::factory()->create(['total_people' => null]);
         RescueRequest::factory()->create(['total_people' => 3]);
 
-        $ascending = $this->repository->listWithFilters([], 'total_people', 'asc');
-        $descending = $this->repository->listWithFilters([], 'total_people', 'desc');
+        $ascending = $this->repository->paginateWithFilters([], 'total_people', 'asc', 50);
+        $descending = $this->repository->paginateWithFilters([], 'total_people', 'desc', 50);
 
         $this->assertNull($ascending->last()->total_people);
         $this->assertNull($descending->last()->total_people);
@@ -267,213 +267,217 @@ class RescueRequestRepositoryTest extends TestCase
         $this->assertTrue($rescueRequest->fresh()->operator->is($operator));
     }
 
-    #[TestDox('listWithFilters() deve devolver uma coleção vazia quando não existe nenhum pedido.')]
-    public function test_list_with_filters_returns_an_empty_collection_when_there_are_no_requests(): void
+    #[TestDox('paginateWithFilters() deve devolver uma coleção vazia quando não existe nenhum pedido.')]
+    public function test_paginate_with_filters_returns_an_empty_collection_when_there_are_no_requests(): void
     {
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertCount(0, $results);
     }
 
-    #[TestDox('listWithFilters() deve devolver o único pedido existente quando nenhum filtro é informado.')]
-    public function test_list_with_filters_returns_the_single_request_when_no_filter_is_given(): void
+    #[TestDox('paginateWithFilters() deve devolver o único pedido existente quando nenhum filtro é informado.')]
+    public function test_paginate_with_filters_returns_the_single_request_when_no_filter_is_given(): void
     {
         $rescueRequest = RescueRequest::factory()->create();
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($rescueRequest));
     }
 
-    #[TestDox('listWithFilters() deve devolver todos os pedidos, de qualquer status, quando nenhum filtro é informado.')]
-    public function test_list_with_filters_returns_every_request_when_no_filter_is_given(): void
+    #[TestDox('paginateWithFilters() deve devolver todos os pedidos, de qualquer status, quando nenhum filtro é informado.')]
+    public function test_paginate_with_filters_returns_every_request_when_no_filter_is_given(): void
     {
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::EmResgate]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Cancelado]);
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertCount(4, $results);
     }
 
     #[DataProvider('quantityFilters')]
-    #[TestDox('listWithFilters() deve aplicar cada filtro de quantidade mínima sobre a sua própria coluna.')]
-    public function test_list_with_filters_applies_each_minimum_quantity_filter_to_its_own_column(string $filter, string $column): void
+    #[TestDox('paginateWithFilters() deve aplicar cada filtro de quantidade mínima sobre a sua própria coluna.')]
+    public function test_paginate_with_filters_applies_each_minimum_quantity_filter_to_its_own_column(string $filter, string $column): void
     {
         RescueRequest::factory()->create([$column => 2]);
         $matching = RescueRequest::factory()->create([$column => 8]);
 
-        $results = $this->repository->listWithFilters([$filter => 5], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([$filter => 5], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($matching));
     }
 
-    #[TestDox('listWithFilters() deve incluir o pedido cuja quantidade é exatamente igual ao mínimo informado.')]
-    public function test_list_with_filters_includes_a_request_whose_quantity_equals_the_minimum(): void
+    #[TestDox('paginateWithFilters() deve incluir o pedido cuja quantidade é exatamente igual ao mínimo informado.')]
+    public function test_paginate_with_filters_includes_a_request_whose_quantity_equals_the_minimum(): void
     {
         $atTheLimit = RescueRequest::factory()->create(['total_people' => 5]);
         RescueRequest::factory()->create(['total_people' => 4]);
 
-        $results = $this->repository->listWithFilters(['min_total_people' => 5], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['min_total_people' => 5], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($atTheLimit));
     }
 
-    #[TestDox('listWithFilters() deve incluir um pedido com quantidade 0 quando o filtro mínimo informado é 0.')]
-    public function test_list_with_filters_includes_a_request_with_zero_quantity_when_the_minimum_is_zero(): void
+    #[TestDox('paginateWithFilters() deve incluir um pedido com quantidade 0 quando o filtro mínimo informado é 0.')]
+    public function test_paginate_with_filters_includes_a_request_with_zero_quantity_when_the_minimum_is_zero(): void
     {
         $withZero = RescueRequest::factory()->create(['animals_count' => 0]);
         RescueRequest::factory()->create(['animals_count' => null]);
 
-        $results = $this->repository->listWithFilters(['min_animals_count' => 0], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['min_animals_count' => 0], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($withZero));
     }
 
-    #[TestDox('listWithFilters() deve combinar status e quantidade mínima como interseção, não como união.')]
-    public function test_list_with_filters_combines_status_and_minimum_quantity_as_an_intersection(): void
+    #[TestDox('paginateWithFilters() deve combinar status e quantidade mínima como interseção, não como união.')]
+    public function test_paginate_with_filters_combines_status_and_minimum_quantity_as_an_intersection(): void
     {
         $matching = RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente, 'total_people' => 10]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido, 'total_people' => 10]);
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente, 'total_people' => 2]);
 
-        $results = $this->repository->listWithFilters(
+        $results = $this->repository->paginateWithFilters(
             ['status' => RescueRequestStatus::Pendente->value, 'min_total_people' => 5],
             'created_at',
-            'desc'
+            'desc',
+            50
         );
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($matching));
     }
 
-    #[TestDox('listWithFilters() deve combinar dois filtros de quantidade mínima como interseção, não como união.')]
-    public function test_list_with_filters_combines_two_minimum_quantity_filters_as_an_intersection(): void
+    #[TestDox('paginateWithFilters() deve combinar dois filtros de quantidade mínima como interseção, não como união.')]
+    public function test_paginate_with_filters_combines_two_minimum_quantity_filters_as_an_intersection(): void
     {
         $matching = RescueRequest::factory()->create(['men_count' => 5, 'women_count' => 5]);
         RescueRequest::factory()->create(['men_count' => 5, 'women_count' => 1]);
         RescueRequest::factory()->create(['men_count' => 1, 'women_count' => 5]);
 
-        $results = $this->repository->listWithFilters(
+        $results = $this->repository->paginateWithFilters(
             ['min_men_count' => 3, 'min_women_count' => 3],
             'created_at',
-            'desc'
+            'desc',
+            50
         );
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($matching));
     }
 
-    #[TestDox('listWithFilters() deve devolver uma coleção vazia, sem erro, quando nenhum pedido bate com o status informado.')]
-    public function test_list_with_filters_returns_an_empty_collection_when_no_request_matches_the_status(): void
+    #[TestDox('paginateWithFilters() deve devolver uma coleção vazia, sem erro, quando nenhum pedido bate com o status informado.')]
+    public function test_paginate_with_filters_returns_an_empty_collection_when_no_request_matches_the_status(): void
     {
         RescueRequest::factory()->create(['status' => RescueRequestStatus::Pendente]);
 
-        $results = $this->repository->listWithFilters(['status' => RescueRequestStatus::Concluido->value], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters(['status' => RescueRequestStatus::Concluido->value], 'created_at', 'desc', 50);
 
         $this->assertCount(0, $results);
     }
 
-    #[TestDox('listWithFilters() deve ignorar filtros informados como null ou string vazia.')]
-    public function test_list_with_filters_ignores_null_and_empty_string_filters(): void
+    #[TestDox('paginateWithFilters() deve ignorar filtros informados como null ou string vazia.')]
+    public function test_paginate_with_filters_ignores_null_and_empty_string_filters(): void
     {
         RescueRequest::factory()->count(2)->create();
 
-        $results = $this->repository->listWithFilters(
+        $results = $this->repository->paginateWithFilters(
             ['status' => null, 'min_total_people' => '', 'min_men_count' => null],
             'created_at',
-            'desc'
+            'desc',
+            50
         );
 
         $this->assertCount(2, $results);
     }
 
-    #[TestDox('listWithFilters() não deve tratar as chaves de ordenação presentes no array de filtros como filtros.')]
-    public function test_list_with_filters_does_not_treat_sorting_keys_as_filters(): void
+    #[TestDox('paginateWithFilters() não deve tratar as chaves de ordenação presentes no array de filtros como filtros.')]
+    public function test_paginate_with_filters_does_not_treat_sorting_keys_as_filters(): void
     {
         RescueRequest::factory()->count(2)->create();
 
-        $results = $this->repository->listWithFilters(
+        $results = $this->repository->paginateWithFilters(
             ['sort_by' => 'total_people', 'sort_direction' => 'asc'],
             'created_at',
-            'desc'
+            'desc',
+            50
         );
 
         $this->assertCount(2, $results);
     }
 
-    #[TestDox('listWithFilters() deve ordenar por data de criação do mais antigo para o mais recente na direção "asc".')]
-    public function test_list_with_filters_sorts_by_created_at_ascending(): void
+    #[TestDox('paginateWithFilters() deve ordenar por data de criação do mais antigo para o mais recente na direção "asc".')]
+    public function test_paginate_with_filters_sorts_by_created_at_ascending(): void
     {
         $newest = RescueRequest::factory()->create(['created_at' => now()]);
         $oldest = RescueRequest::factory()->create(['created_at' => now()->subDays(2)]);
         $middle = RescueRequest::factory()->create(['created_at' => now()->subDay()]);
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'asc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'asc', 50);
 
         $this->assertSame([$oldest->id, $middle->id, $newest->id], $results->pluck('id')->all());
     }
 
-    #[TestDox('listWithFilters() deve ordenar por data de criação do mais recente para o mais antigo na direção "desc".')]
-    public function test_list_with_filters_sorts_by_created_at_descending(): void
+    #[TestDox('paginateWithFilters() deve ordenar por data de criação do mais recente para o mais antigo na direção "desc".')]
+    public function test_paginate_with_filters_sorts_by_created_at_descending(): void
     {
         $newest = RescueRequest::factory()->create(['created_at' => now()]);
         $oldest = RescueRequest::factory()->create(['created_at' => now()->subDays(2)]);
         $middle = RescueRequest::factory()->create(['created_at' => now()->subDay()]);
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertSame([$newest->id, $middle->id, $oldest->id], $results->pluck('id')->all());
     }
 
-    #[TestDox('listWithFilters() deve ordenar do maior para o menor na direção "desc", deixando os pedidos sem a quantidade por último.')]
-    public function test_list_with_filters_sorts_descending_with_missing_quantities_last(): void
+    #[TestDox('paginateWithFilters() deve ordenar do maior para o menor na direção "desc", deixando os pedidos sem a quantidade por último.')]
+    public function test_paginate_with_filters_sorts_descending_with_missing_quantities_last(): void
     {
         RescueRequest::factory()->create(['total_people' => 5]);
         RescueRequest::factory()->create(['total_people' => null]);
         RescueRequest::factory()->create(['total_people' => 10]);
 
-        $results = $this->repository->listWithFilters([], 'total_people', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'total_people', 'desc', 50);
 
         $this->assertSame([10, 5, null], $results->pluck('total_people')->all());
     }
 
-    #[TestDox('listWithFilters() não deve listar pedidos removidos por soft delete.')]
-    public function test_list_with_filters_excludes_soft_deleted_requests(): void
+    #[TestDox('paginateWithFilters() não deve listar pedidos removidos por soft delete.')]
+    public function test_paginate_with_filters_excludes_soft_deleted_requests(): void
     {
         $kept = RescueRequest::factory()->create();
         RescueRequest::factory()->create()->delete();
 
-        $results = $this->repository->listWithFilters([], 'created_at', 'desc');
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 50);
 
         $this->assertCount(1, $results);
         $this->assertTrue($results->first()->is($kept));
     }
 
-    #[TestDox('listWithFilters() deve lançar QueryException quando a coluna de ordenação não existe (a validação é responsabilidade do Form Request).')]
-    public function test_list_with_filters_throws_a_query_exception_for_an_unknown_sort_column(): void
+    #[TestDox('paginateWithFilters() deve lançar QueryException quando a coluna de ordenação não existe (a validação é responsabilidade do Form Request).')]
+    public function test_paginate_with_filters_throws_a_query_exception_for_an_unknown_sort_column(): void
     {
         RescueRequest::factory()->create();
 
         $this->expectException(QueryException::class);
 
-        $this->repository->listWithFilters([], 'coluna_inexistente', 'asc');
+        $this->repository->paginateWithFilters([], 'coluna_inexistente', 'asc', 50);
     }
 
-    #[TestDox('listWithFilters() deve lançar InvalidArgumentException quando a direção de ordenação não é asc nem desc.')]
-    public function test_list_with_filters_throws_for_an_invalid_sort_direction(): void
+    #[TestDox('paginateWithFilters() deve lançar InvalidArgumentException quando a direção de ordenação não é asc nem desc.')]
+    public function test_paginate_with_filters_throws_for_an_invalid_sort_direction(): void
     {
         RescueRequest::factory()->create();
 
         $this->expectException(\InvalidArgumentException::class);
 
-        $this->repository->listWithFilters([], 'created_at', 'sideways');
+        $this->repository->paginateWithFilters([], 'created_at', 'sideways', 50);
     }
 
     #[TestDox('updateStatus() deve devolver a mesma instância recebida, já com o novo status.')]
@@ -554,5 +558,95 @@ class RescueRequestRepositoryTest extends TestCase
 
         $this->assertNotSame($rescueRequest, $fresh);
         $this->assertSame(RescueRequestStatus::Pendente, $fresh->status);
+    }
+
+    #[TestDox('paginateWithFilters() deve devolver só a quantidade de pedidos da página pedida, com o total de pedidos que atendem aos filtros.')]
+    public function test_paginate_with_filters_returns_only_the_requested_page_with_the_total(): void
+    {
+        RescueRequest::factory()->count(12)->create();
+
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 5);
+
+        $this->assertCount(5, $results);
+        $this->assertSame(12, $results->total());
+        $this->assertSame(5, $results->perPage());
+        $this->assertSame(3, $results->lastPage());
+    }
+
+    #[TestDox('paginateWithFilters() deve devolver os pedidos seguintes na segunda página, sem repetir os da primeira.')]
+    public function test_paginate_with_filters_returns_different_requests_on_the_second_page(): void
+    {
+        RescueRequest::factory()->count(12)->create();
+
+        $first = $this->repository->paginateWithFilters([], 'created_at', 'desc', 5);
+        request()->merge(['page' => 2]);
+        $second = $this->repository->paginateWithFilters([], 'created_at', 'desc', 5);
+
+        $this->assertSame(2, $second->currentPage());
+        $this->assertCount(5, $second);
+        $this->assertEmpty($first->pluck('id')->intersect($second->pluck('id')));
+    }
+
+    #[TestDox('paginateWithFilters() deve devolver só os pedidos restantes na última página.')]
+    public function test_paginate_with_filters_returns_the_remaining_requests_on_the_last_page(): void
+    {
+        RescueRequest::factory()->count(12)->create();
+        request()->merge(['page' => 3]);
+
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 5);
+
+        $this->assertCount(2, $results);
+    }
+
+    #[TestDox('paginateWithFilters() deve devolver uma página vazia quando a página pedida passa da última.')]
+    public function test_paginate_with_filters_returns_an_empty_page_beyond_the_last_one(): void
+    {
+        RescueRequest::factory()->count(3)->create();
+        request()->merge(['page' => 9]);
+
+        $results = $this->repository->paginateWithFilters([], 'created_at', 'desc', 5);
+
+        $this->assertCount(0, $results);
+        $this->assertSame(3, $results->total());
+    }
+
+    #[TestDox('paginateWithFilters() deve contar no total só os pedidos que atendem aos filtros.')]
+    public function test_paginate_with_filters_counts_only_the_filtered_requests_in_the_total(): void
+    {
+        RescueRequest::factory()->count(7)->create(['status' => RescueRequestStatus::Pendente]);
+        RescueRequest::factory()->count(4)->create(['status' => RescueRequestStatus::Concluido]);
+
+        $results = $this->repository->paginateWithFilters(['status' => 'pendente'], 'created_at', 'desc', 5);
+
+        $this->assertSame(7, $results->total());
+        $this->assertCount(5, $results);
+    }
+
+    #[TestDox('paginateWithFilters() deve manter os pedidos sem a quantidade ordenada no fim da lista inteira, e não de cada página.')]
+    public function test_paginate_with_filters_keeps_requests_without_the_quantity_at_the_end_of_the_whole_list(): void
+    {
+        RescueRequest::factory()->count(3)->create(['total_people' => null]);
+        foreach ([1, 2, 3, 4] as $quantity) {
+            RescueRequest::factory()->create(['total_people' => $quantity]);
+        }
+
+        $first = $this->repository->paginateWithFilters([], 'total_people', 'desc', 4);
+        request()->merge(['page' => 2]);
+        $second = $this->repository->paginateWithFilters([], 'total_people', 'desc', 4);
+
+        $this->assertSame([4, 3, 2, 1], $first->pluck('total_people')->all());
+        $this->assertSame([null, null, null], $second->pluck('total_people')->all());
+    }
+
+    #[TestDox('paginateWithFilters() deve manter a ordem estável entre páginas quando vários pedidos têm o mesmo valor de ordenação.')]
+    public function test_paginate_with_filters_has_a_stable_order_across_pages_when_values_tie(): void
+    {
+        RescueRequest::factory()->count(6)->create(['total_people' => 2]);
+
+        $first = $this->repository->paginateWithFilters([], 'total_people', 'asc', 3);
+        request()->merge(['page' => 2]);
+        $second = $this->repository->paginateWithFilters([], 'total_people', 'asc', 3);
+
+        $this->assertCount(6, $first->pluck('id')->merge($second->pluck('id'))->unique());
     }
 }

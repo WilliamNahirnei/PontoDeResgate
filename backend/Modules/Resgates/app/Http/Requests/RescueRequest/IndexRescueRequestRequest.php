@@ -24,6 +24,18 @@ class IndexRescueRequestRequest extends FormRequest
     ];
 
     /**
+     * Page sizes accepted by the "per_page" query parameter.
+     *
+     * @var array<int, int>
+     */
+    public const PER_PAGE_OPTIONS = [5, 10, 20, 30, 50, 100];
+
+    /**
+     * Page size used when "per_page" is not informed.
+     */
+    public const DEFAULT_PER_PAGE = 50;
+
+    /**
      * Authorization is enforced at the route level (auth:sanctum middleware).
      */
     public function authorize(): bool
@@ -46,6 +58,8 @@ class IndexRescueRequestRequest extends FormRequest
             'min_animals_count' => ['nullable', 'integer', 'min:0', 'max:999'],
             'sort_by' => ['nullable', Rule::in(self::SORTABLE_COLUMNS)],
             'sort_direction' => ['nullable', Rule::in(['asc', 'desc'])],
+            'per_page' => ['nullable', 'integer', Rule::in(self::PER_PAGE_OPTIONS)],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

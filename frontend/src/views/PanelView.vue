@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import api from '@/services/api'
 import RescueRequestsMap from '@/components/RescueRequestsMap.vue'
 import RescueRequestsList from '@/components/RescueRequestsList.vue'
+import RescueRequestsPagination from '@/components/RescueRequestsPagination.vue'
 import CancelRescueRequestDialog from '@/components/CancelRescueRequestDialog.vue'
 import { MAX_QUANTITY, isValidQuantity, quantityRules } from '@/utils/quantity'
 
@@ -28,7 +29,37 @@ const SORT_FIELD_OPTIONS = [
   ...QUANTITY_FIELDS.map(({ field, label }) => ({ title: label, value: field })),
 ]
 
+// Quantidades de pedidos por página oferecidas ao operador (REQUISITOS.md §4.1).
+const PER_PAGE_OPTIONS = [5, 10, 20, 30, 50, 100]
+const DEFAULT_PER_PAGE = 50
+const PER_PAGE_STORAGE_KEY = 'pontoderesgate.panelPerPage'
+
+// A quantidade escolhida fica guardada no navegador; um valor ausente, inválido
+// ou um armazenamento indisponível voltam para a quantidade padrão.
+function loadPerPage() {
+  try {
+    const stored = Number(window.localStorage.getItem(PER_PAGE_STORAGE_KEY))
+    return PER_PAGE_OPTIONS.includes(stored) ? stored : DEFAULT_PER_PAGE
+  } catch {
+    return DEFAULT_PER_PAGE
+  }
+}
+
+function savePerPage(value) {
+  try {
+    window.localStorage.setItem(PER_PAGE_STORAGE_KEY, String(value))
+  } catch {
+    // Sem armazenamento, a escolha vale só até recarregar o painel.
+  }
+}
+
 const rescueRequests = ref([])
+const perPage = ref(loadPerPage())
+const page = ref(1)
+const pagination = ref({ lastPage: 1, from: 0, to: 0, total: 0 })
+// A barra de paginação só aparece depois da primeira resposta, para não
+// mostrar um total zerado enquanto os pedidos ainda carregam.
+const loaded = ref(false)
 const selectedId = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -51,8 +82,15 @@ const sortField = ref('created_at')
 const sortDirection = ref('desc')
 
 function clearQuantityFilters() {
+  const hadFilters = QUANTITY_FIELDS.some(({ field }) => minQuantities.value[field] !== '')
   for (const { field } of QUANTITY_FIELDS) {
     minQuantities.value[field] = ''
+  }
+
+  // Sem nenhum filtro para limpar, o watcher dos filtros não dispara: volta à
+  // primeira página daqui.
+  if (!hadFilters) {
+    fetchFirstPage()
   }
 }
 
@@ -61,6 +99,8 @@ function clearQuantityFilters() {
 // sobrecarregar a memória do navegador e o tamanho da resposta da API.
 function buildQueryParams() {
   const params = {
+    page: page.value,
+    per_page: perPage.value,
     sort_by: sortField.value,
     sort_direction: sortDirection.value,
   }
@@ -87,7 +127,22 @@ async function fetchRescueRequests() {
 
   try {
     const response = await api.get('/api/rescue-requests', { params: buildQueryParams() })
+    const { meta } = response.data
     rescueRequests.value = response.data.data
+    pagination.value = {
+      lastPage: meta.last_page,
+      from: meta.from ?? 0,
+      to: meta.to ?? 0,
+      total: meta.total,
+    }
+    loaded.value = true
+
+    // A página aberta deixou de existir (ex.: o último pedido dela mudou de
+    // status com um filtro aplicado): mostra a última página que sobrou.
+    if (page.value > meta.last_page) {
+      page.value = meta.last_page
+      await fetchRescueRequests()
+    }
   } catch {
     errorMessage.value = 'Não foi possível carregar os pedidos.'
   } finally {
@@ -97,8 +152,26 @@ async function fetchRescueRequests() {
 
 let quantityFilterTimeout = null
 
-watch(statusFilter, fetchRescueRequests)
-watch([sortField, sortDirection], fetchRescueRequests)
+// Mudar status, quantidade mínima, ordenação ou quantidade por página leva a
+// lista de volta à primeira página.
+function fetchFirstPage() {
+  page.value = 1
+  return fetchRescueRequests()
+}
+
+function handlePageChange(value) {
+  page.value = value
+  return fetchRescueRequests()
+}
+
+function handlePerPageChange(value) {
+  perPage.value = value
+  savePerPage(value)
+  return fetchFirstPage()
+}
+
+watch(statusFilter, fetchFirstPage)
+watch([sortField, sortDirection], fetchFirstPage)
 watch(
   minQuantities,
   () => {
@@ -109,7 +182,7 @@ watch(
       return
     }
 
-    quantityFilterTimeout = setTimeout(fetchRescueRequests, 400)
+    quantityFilterTimeout = setTimeout(fetchFirstPage, 400)
   },
   { deep: true },
 )
@@ -261,17 +334,31 @@ onMounted(fetchRescueRequests)
         :selected-id="selectedId"
         @select="handleSelect"
       />
-      <RescueRequestsList
-        class="panel-list"
-        :rescue-requests="rescueRequests"
-        :selected-id="selectedId"
-        :actions-in-progress="actionsInProgress"
-        @select="handleSelect"
-        @assume="handleAssume"
-        @complete="handleComplete"
-        @cancel="openCancelDialog"
-        @share="shareLocation"
-      />
+      <div class="panel-side">
+        <RescueRequestsList
+          class="panel-list"
+          :rescue-requests="rescueRequests"
+          :selected-id="selectedId"
+          :actions-in-progress="actionsInProgress"
+          @select="handleSelect"
+          @assume="handleAssume"
+          @complete="handleComplete"
+          @cancel="openCancelDialog"
+          @share="shareLocation"
+        />
+        <RescueRequestsPagination
+          v-if="loaded"
+          :page="page"
+          :last-page="pagination.lastPage"
+          :from="pagination.from"
+          :to="pagination.to"
+          :total="pagination.total"
+          :per-page="perPage"
+          :per-page-options="PER_PAGE_OPTIONS"
+          @update:page="handlePageChange"
+          @update:per-page="handlePerPageChange"
+        />
+      </div>
     </div>
 
     <CancelRescueRequestDialog
@@ -345,10 +432,19 @@ onMounted(fetchRescueRequests)
   min-width: 0;
 }
 
-.panel-list {
+.panel-side {
   flex: 1 1 40%;
   min-width: 280px;
   max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.panel-list {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 @media (max-width: 960px) {
@@ -357,7 +453,7 @@ onMounted(fetchRescueRequests)
   }
 
   .panel-map,
-  .panel-list {
+  .panel-side {
     flex: 1 1 50%;
     max-width: none;
   }
