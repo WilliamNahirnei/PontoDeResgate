@@ -2,8 +2,8 @@
 
 namespace Modules\Resgates\Tests\Unit\Services;
 
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
 use Modules\Resgates\Enums\RescueRequestStatus;
 use Modules\Resgates\Models\RescueRequest;
@@ -548,5 +548,81 @@ class RescueRequestServiceTest extends TestCase
             'cancellation_reason' => null,
         ]);
         $this->assertDatabaseMissing('rescue_status_logs', ['rescue_request_id' => $rescueRequest->id]);
+    }
+
+    #[TestDox('complete() deve persistir a observação informada junto com o novo status "concluido".')]
+    public function test_complete_records_the_completion_note(): void
+    {
+        $rescueRequest = RescueRequest::factory()->emResgate()->create();
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('updateStatus')
+            ->once()
+            ->with($rescueRequest, [
+                'completion_note' => 'Família resgatada em segurança.',
+                'status' => RescueRequestStatus::Concluido,
+            ])
+            ->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('freshWithOperator')->once()->andReturn($rescueRequest);
+        $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        (new RescueRequestService($rescueRequests, $statusLogs))
+            ->complete($rescueRequest, $operator, 'Família resgatada em segurança.');
+    }
+
+    #[TestDox('complete() deve remover os espaços das pontas da observação antes de persisti-la.')]
+    public function test_complete_trims_the_completion_note(): void
+    {
+        $rescueRequest = RescueRequest::factory()->emResgate()->create();
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('updateStatus')
+            ->once()
+            ->with($rescueRequest, ['completion_note' => 'Tudo certo.', 'status' => RescueRequestStatus::Concluido])
+            ->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('freshWithOperator')->once()->andReturn($rescueRequest);
+        $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        (new RescueRequestService($rescueRequests, $statusLogs))
+            ->complete($rescueRequest, $operator, "  Tudo certo.  \n");
+    }
+
+    /**
+     * @return array<string, array{0: ?string}>
+     */
+    public static function blankCompletionNotes(): array
+    {
+        return [
+            'nula' => [null],
+            'vazia' => [''],
+            'só espaços' => ['   '],
+            'só quebras de linha' => ["\n \t\n"],
+        ];
+    }
+
+    #[DataProvider('blankCompletionNotes')]
+    #[TestDox('complete() deve tratar uma observação nula, vazia ou só com espaços como não informada, sem gravá-la.')]
+    public function test_complete_treats_a_blank_note_as_not_informed(?string $note): void
+    {
+        $rescueRequest = RescueRequest::factory()->emResgate()->create();
+        $operator = User::factory()->create();
+
+        $rescueRequests = \Mockery::mock(RescueRequestRepositoryInterface::class);
+        $statusLogs = \Mockery::mock(RescueStatusLogRepositoryInterface::class);
+        $rescueRequests->shouldReceive('findForUpdate')->once()->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('updateStatus')
+            ->once()
+            ->with($rescueRequest, ['status' => RescueRequestStatus::Concluido])
+            ->andReturn($rescueRequest);
+        $rescueRequests->shouldReceive('freshWithOperator')->once()->andReturn($rescueRequest);
+        $statusLogs->shouldReceive('create')->once()->andReturn(\Mockery::mock(RescueStatusLog::class));
+
+        (new RescueRequestService($rescueRequests, $statusLogs))->complete($rescueRequest, $operator, $note);
     }
 }

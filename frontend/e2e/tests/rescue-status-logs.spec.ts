@@ -1,7 +1,7 @@
 import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
 import { adminMasterToken, createOperator, loginViaApi } from '../fixtures/operators'
-import { holdStatusAction } from '../fixtures/status-actions'
+import { completeThroughDialog, holdStatusAction } from '../fixtures/status-actions'
 
 const API_BASE_URL = process.env.E2E_API_BASE_URL ?? 'http://localhost:8180'
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5183'
@@ -165,7 +165,8 @@ test.describe('Tela de logs de auditoria', () => {
     await expect(toFinishCard.getByText('Em resgate', { exact: true })).toBeVisible()
 
     const complete = await holdStatusAction(page, toFinish.id, 'complete')
-    await toFinishCard.getByRole('button', { name: 'Concluir' }).dblclick()
+    await toFinishCard.getByRole('button', { name: 'Concluir' }).click()
+    await page.getByRole('button', { name: 'Confirmar conclusão' }).dblclick()
     await complete.releaseAndWait()
     await expect(toFinishCard.getByText('Concluído', { exact: true })).toBeVisible()
 
@@ -231,7 +232,7 @@ test.describe('Tela de logs de auditoria', () => {
     const completedCard = page.locator('.rescue-requests-list .v-card', { hasText: completed.requester_name })
     await completedCard.getByRole('button', { name: 'Assumir' }).click()
     await expect(completedCard.getByRole('button', { name: 'Concluir' })).toBeVisible()
-    await completedCard.getByRole('button', { name: 'Concluir' }).click()
+    await completeThroughDialog(page, completedCard)
     await expect(completedCard.getByText('Concluído', { exact: true })).toBeVisible()
 
     const cancelledCard = page.locator('.rescue-requests-list .v-card', { hasText: cancelled.requester_name })
@@ -322,5 +323,175 @@ test.describe('Tela de logs de auditoria', () => {
 
     await expect(page.getByText('Carregando itens...')).toBeVisible()
     releaseLogs()
+  })
+
+  // Prepara pedidos já finalizados por API: assumidos por um operador novo e
+  // concluídos (com ou sem observação) ou cancelados.
+  async function finishRequest(request, label: string, finish: { note?: string } | { reason: string } | 'complete') {
+    const operator = await createOperator(request)
+    const rescueRequest = await createRescueRequest(request, {
+      requester_name: `E2E Log ${label} ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume', operator.token)
+    if (finish === 'complete') {
+      await changeRescueRequestStatus(request, rescueRequest.id, 'complete', operator.token)
+    } else if ('reason' in finish) {
+      await changeRescueRequestStatus(request, rescueRequest.id, 'cancel', operator.token, {
+        cancellation_reason: finish.reason,
+      })
+    } else {
+      await changeRescueRequestStatus(request, rescueRequest.id, 'complete', operator.token, {
+        completion_note: finish.note,
+      })
+    }
+
+    return { rescueRequest, operator }
+  }
+
+  const completionRow = (page, name: string) => logRows(page, name).filter({ hasText: /Em resgate[\s\S]*Concluído/ })
+
+  test('a entrada da conclusão com observação tem um ícone que abre a janela "Observação da conclusão" com o texto, o pedido, o operador e a data/hora', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const note = `Família resgatada em segurança ${Date.now()}.`
+    const { rescueRequest, operator } = await finishRequest(request, 'Obs Conclusao', { note })
+
+    await openLogs(page)
+    await completionRow(page, rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Observação da conclusão', { exact: true })).toBeVisible()
+    await expect(dialog).toContainText(note)
+    await expect(dialog).toContainText(rescueRequest.requester_name)
+    await expect(dialog).toContainText(operator.name)
+    await expect(dialog).toContainText(/Data\/hora:?\s*\d{2}\/\d{2}\/\d{4}/)
+  })
+
+  test('a entrada da conclusão sem observação informada não tem o ícone de observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const { rescueRequest } = await finishRequest(request, 'Sem Obs', 'complete')
+
+    await openLogs(page)
+
+    await expect(completionRow(page, rescueRequest.requester_name)).toHaveCount(1)
+    await expect(logRows(page, rescueRequest.requester_name).getByRole('button', { name: /^Ver (observação|motivo)/ })).toHaveCount(0)
+  })
+
+  test('num pedido assumido e depois concluído com observação, só a entrada da conclusão tem o ícone; a de assumir não', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const { rescueRequest } = await finishRequest(request, 'Assumir E Concluir', { note: 'Observação da conclusão do teste.' })
+
+    await openLogs(page)
+
+    const rows = logRows(page, rescueRequest.requester_name)
+    await expect(rows).toHaveCount(2)
+    await expect(completionRow(page, rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true })).toHaveCount(1)
+    const assumeRow = rows.filter({ hasText: /Pendente[\s\S]*Em resgate/ })
+    await expect(assumeRow).toHaveCount(1)
+    await expect(assumeRow.getByRole('button', { name: /^Ver (observação|motivo)/ })).toHaveCount(0)
+  })
+
+  test('a entrada de cancelamento tem um ícone que abre a janela "Motivo do cancelamento" com o motivo, o pedido, o operador e a data/hora', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const reason = `Endereço não encontrado ${Date.now()}.`
+    const { rescueRequest, operator } = await finishRequest(request, 'Motivo', { reason })
+
+    await openLogs(page)
+    await logRows(page, rescueRequest.requester_name)
+      .filter({ hasText: /Em resgate[\s\S]*Cancelado/ })
+      .getByRole('button', { name: 'Ver motivo do cancelamento', exact: true })
+      .click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Motivo do cancelamento', { exact: true })).toBeVisible()
+    await expect(dialog).toContainText(reason)
+    await expect(dialog).toContainText(rescueRequest.requester_name)
+    await expect(dialog).toContainText(operator.name)
+    await expect(dialog).toContainText(/Data\/hora:?\s*\d{2}\/\d{2}\/\d{4}/)
+  })
+
+  test('a linha do log não exibe o texto do motivo do cancelamento nem o da observação da conclusão: ele só aparece na janela', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const note = `Observação só na janela ${unique}.`
+    const reason = `Motivo só na janela ${unique}.`
+    const completed = await finishRequest(request, 'Linha Obs', { note })
+    const cancelled = await finishRequest(request, 'Linha Motivo', { reason })
+
+    await openLogs(page)
+
+    // O ícone existe (a observação foi gravada), mas o texto não está na tabela.
+    await expect(completionRow(page, completed.rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true })).toBeVisible()
+    await expect(logRows(page, cancelled.rescueRequest.requester_name).getByRole('button', { name: 'Ver motivo do cancelamento', exact: true })).toBeVisible()
+    await expect(page.getByRole('table')).not.toContainText(note)
+    await expect(page.getByRole('table')).not.toContainText(reason)
+  })
+
+  test('fechar a janela do ícone pelo botão de fechar a esconde, e a tela de logs continua com as mesmas entradas', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const { rescueRequest } = await finishRequest(request, 'Fechar', { note: 'Observação para fechar.' })
+
+    await openLogs(page)
+    const rows = logRows(page, rescueRequest.requester_name)
+    await expect(rows).toHaveCount(2)
+    await completionRow(page, rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click()
+
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(rows).toHaveCount(2)
+    await expect(completionRow(page, rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true })).toBeVisible()
+  })
+
+  test('a entrada de log de assumir pedido não tem ícone', async ({ page, request, loginAsAdminMaster }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Log So Assumir ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+
+    await openLogs(page)
+
+    const rows = logRows(page, rescueRequest.requester_name)
+    await expect(rows).toHaveCount(1)
+    await expect(rows).toContainText('Em resgate')
+    await expect(rows.getByRole('button')).toHaveCount(0)
+  })
+
+  test('a janela do ícone mostra completos os 1000 caracteres de uma observação no limite', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const note = `Observação no limite ${Date.now()} `.padEnd(1000, 'l')
+    const { rescueRequest } = await finishRequest(request, 'Limite', { note })
+
+    await openLogs(page)
+    await completionRow(page, rescueRequest.requester_name).getByRole('button', { name: 'Ver observação', exact: true }).click()
+
+    await expect(page.getByRole('dialog')).toContainText(note)
   })
 })

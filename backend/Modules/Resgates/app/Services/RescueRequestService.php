@@ -60,18 +60,22 @@ class RescueRequestService
     }
 
     /**
-     * Mark a rescue request that is currently "em_resgate" as "concluido".
+     * Mark a rescue request that is currently "em_resgate" as "concluido", recording the optional note.
      *
      * @throws HttpException When the request is not in progress (409).
      */
-    public function complete(RescueRequest $rescueRequest, User $operator): RescueRequest
+    public function complete(RescueRequest $rescueRequest, User $operator, ?string $note = null): RescueRequest
     {
+        // Uma observação só com espaços conta como não informada: nada é gravado.
+        $note = trim((string) $note);
+
         return $this->changeStatus(
             $rescueRequest,
             $operator,
             [RescueRequestStatus::EmResgate],
             'Este pedido foi alterado por outro operador.',
             RescueRequestStatus::Concluido,
+            $note === '' ? [] : ['completion_note' => $note],
         );
     }
 

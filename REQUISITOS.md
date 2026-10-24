@@ -130,6 +130,8 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 - **Concluir pedido**: altera o status para **"Concluído"**. Ao acionar "Concluir", o operador vê um campo para informar uma observação sobre o resgate antes de confirmar.
   - A observação é **opcional**: o operador pode confirmar a conclusão sem preenchê-la.
   - A observação tem no máximo **1000 caracteres**.
+  - O campo da observação mostra ao operador quantos caracteres já foram usados de 1000 e não aceita além disso: o texto digitado ou colado para no 1000º caractere.
+  - O sistema não registra observação com mais de 1000 caracteres, mesmo que ela não tenha sido informada pela tela.
   - Um texto só com espaços em branco é tratado como observação não informada.
   - O operador pode desistir no diálogo de observação; nesse caso o pedido continua "Em resgate", sem alteração.
   - Depois de confirmada, a observação faz parte da conclusão e **não pode ser alterada nem incluída depois**: o pedido concluído continua sem nenhuma ação de transição.
@@ -166,7 +168,10 @@ Acesso restrito a usuários autenticados via Bearer token (Sanctum).
 ### 4.4 Consulta de logs de operações (admin master)
 - Junto aos itens de navegação para o painel principal e para a lista de operadores, o admin master tem acesso a um menu para a lista de logs (`rescue_status_logs`) das operações realizadas sobre os pedidos de resgate.
 - A lista de logs é paginada.
-- A entrada de log da mudança de status para "Concluído" exibe a observação da conclusão, quando informada; as demais entradas de log não exibem observação.
+- As entradas de log de cancelamento e de conclusão com observação informada têm um ícone; as demais entradas (assumir e conclusão sem observação) não têm ícone.
+- Ao clicar no ícone, o admin master vê uma janela (modal) com o título "Motivo do cancelamento" (entrada de cancelamento) ou "Observação da conclusão" (entrada de conclusão), o texto completo, e o pedido, o operador e a data/hora daquela entrada, com um botão para fechar.
+- A linha do log não exibe o texto do motivo nem o da observação: ele só aparece na janela.
+- Fechar a janela não altera o pedido nem o log.
 - Operadores (que não sejam admin master) não têm acesso a essa tela nem ao endpoint correspondente — exclusivo do admin master.
 
 ### 4.5 Cadastro e gestão de operadores (admin master)

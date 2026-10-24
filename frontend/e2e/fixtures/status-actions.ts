@@ -1,4 +1,4 @@
-import type { Page, Request } from '@playwright/test'
+import type { Locator, Page, Request } from '@playwright/test'
 
 type StatusAction = 'assume' | 'complete' | 'cancel'
 
@@ -26,4 +26,14 @@ export async function holdStatusAction(page: Page, rescueRequestId: number, acti
       await Promise.all(requests.map((request) => request.response()))
     },
   }
+}
+
+// Conclui o pedido pelo diálogo de observação: abre com "Concluir", preenche a
+// observação (opcional) e confirma.
+export async function completeThroughDialog(page: Page, rescueCard: Locator, note?: string) {
+  await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+  if (note !== undefined) {
+    await page.getByLabel('Observação da conclusão').fill(note)
+  }
+  await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
 }

@@ -52,6 +52,7 @@ class RescueStatusLogResourceTest extends TestCase
             ],
             'previous_status' => 'pendente',
             'new_status' => 'em_resgate',
+            'observation' => null,
             'created_at' => '2026-09-19T10:00:00.000000Z',
         ], $data);
     }
@@ -88,5 +89,74 @@ class RescueStatusLogResourceTest extends TestCase
             'requester_name' => 'Ana Beatriz',
             'reference_point' => 'Casa azul, próximo à ponte.',
         ], $data['rescue_request']);
+    }
+
+    #[TestDox('A resposta deve expor como observação o motivo do cancelamento na entrada que muda o pedido para "cancelado".')]
+    public function test_it_exposes_the_cancellation_reason_as_the_observation_of_a_cancellation_entry(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create([
+            'status' => RescueRequestStatus::Cancelado,
+            'cancellation_reason' => 'Endereço não encontrado.',
+        ]);
+        $log = RescueStatusLog::factory()->create([
+            'rescue_request_id' => $rescueRequest->id,
+            'previous_status' => RescueRequestStatus::EmResgate,
+            'new_status' => RescueRequestStatus::Cancelado,
+        ]);
+
+        $data = (new RescueStatusLogResource($log->load(['rescueRequest', 'operator'])))->response()->getData(true)['data'];
+
+        $this->assertSame('Endereço não encontrado.', $data['observation']);
+    }
+
+    #[TestDox('A resposta deve expor como observação a observação da conclusão na entrada que muda o pedido para "concluido".')]
+    public function test_it_exposes_the_completion_note_as_the_observation_of_a_completion_entry(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create([
+            'status' => RescueRequestStatus::Concluido,
+            'completion_note' => 'Família resgatada em segurança.',
+        ]);
+        $log = RescueStatusLog::factory()->create([
+            'rescue_request_id' => $rescueRequest->id,
+            'previous_status' => RescueRequestStatus::EmResgate,
+            'new_status' => RescueRequestStatus::Concluido,
+        ]);
+
+        $data = (new RescueStatusLogResource($log->load(['rescueRequest', 'operator'])))->response()->getData(true)['data'];
+
+        $this->assertSame('Família resgatada em segurança.', $data['observation']);
+    }
+
+    #[TestDox('A resposta deve expor a observação como null na entrada de conclusão sem observação informada.')]
+    public function test_it_exposes_a_null_observation_for_a_completion_without_note(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create(['status' => RescueRequestStatus::Concluido, 'completion_note' => null]);
+        $log = RescueStatusLog::factory()->create([
+            'rescue_request_id' => $rescueRequest->id,
+            'previous_status' => RescueRequestStatus::EmResgate,
+            'new_status' => RescueRequestStatus::Concluido,
+        ]);
+
+        $data = (new RescueStatusLogResource($log->load(['rescueRequest', 'operator'])))->response()->getData(true)['data'];
+
+        $this->assertNull($data['observation']);
+    }
+
+    #[TestDox('A resposta deve expor a observação como null na entrada de assumir, mesmo que o pedido já tenha observação.')]
+    public function test_it_never_exposes_an_observation_on_the_assume_entry(): void
+    {
+        $rescueRequest = RescueRequest::factory()->create([
+            'status' => RescueRequestStatus::Concluido,
+            'completion_note' => 'Família resgatada em segurança.',
+        ]);
+        $log = RescueStatusLog::factory()->create([
+            'rescue_request_id' => $rescueRequest->id,
+            'previous_status' => RescueRequestStatus::Pendente,
+            'new_status' => RescueRequestStatus::EmResgate,
+        ]);
+
+        $data = (new RescueStatusLogResource($log->load(['rescueRequest', 'operator'])))->response()->getData(true)['data'];
+
+        $this->assertNull($data['observation']);
     }
 }

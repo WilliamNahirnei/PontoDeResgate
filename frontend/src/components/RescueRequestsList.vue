@@ -117,6 +117,9 @@ function peopleComposition(rescueRequest) {
       <div v-if="rescueRequest.cancellation_reason" class="text-body-2 text-medium-emphasis">
         Motivo do cancelamento: {{ rescueRequest.cancellation_reason }}
       </div>
+      <div v-if="rescueRequest.completion_note" class="text-body-2 text-medium-emphasis">
+        Observação da conclusão: {{ rescueRequest.completion_note }}
+      </div>
 
       <div class="d-flex flex-wrap ga-2 mt-3">
         <v-btn

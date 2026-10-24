@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Resgates\Enums\RescueRequestStatus;
 use Modules\Resgates\Models\RescueRequest;
 use Modules\Usuarios\Models\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RescueRequestListingFiltersTest extends TestCase
@@ -114,7 +115,7 @@ class RescueRequestListingFiltersTest extends TestCase
         return ['5' => [5], '10' => [10], '20' => [20], '30' => [30], '50' => [50], '100' => [100]];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('allowedPerPage')]
+    #[DataProvider('allowedPerPage')]
     public function test_rescue_request_listing_honors_each_allowed_per_page(int $perPage): void
     {
         $operator = User::factory()->create();

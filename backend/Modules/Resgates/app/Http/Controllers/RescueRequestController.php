@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Modules\Resgates\Http\Requests\RescueRequest\CancelRescueRequestRequest;
+use Modules\Resgates\Http\Requests\RescueRequest\CompleteRescueRequestRequest;
 use Modules\Resgates\Http\Requests\RescueRequest\IndexRescueRequestRequest;
 use Modules\Resgates\Http\Requests\RescueRequest\StoreRescueRequestRequest;
 use Modules\Resgates\Http\Resources\RescueRequestResource;
@@ -55,9 +56,11 @@ class RescueRequestController extends Controller
     /**
      * Mark a rescue request that is in progress as concluded.
      */
-    public function complete(Request $request, RescueRequest $rescueRequest): RescueRequestResource
+    public function complete(CompleteRescueRequestRequest $request, RescueRequest $rescueRequest): RescueRequestResource
     {
-        return new RescueRequestResource($this->service->complete($rescueRequest, $request->user()));
+        return new RescueRequestResource(
+            $this->service->complete($rescueRequest, $request->user(), $request->validated('completion_note'))
+        );
     }
 
     /**

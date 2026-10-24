@@ -29,6 +29,7 @@ class RescueRequestResource extends JsonResource
             'reference_point' => $this->reference_point,
             'status' => $this->status->value,
             'cancellation_reason' => $this->cancellation_reason,
+            'completion_note' => $this->completion_note,
             'operator' => $this->whenLoaded('operator', fn () => $this->operator ? new UserResource($this->operator) : null),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

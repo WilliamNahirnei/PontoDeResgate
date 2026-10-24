@@ -25,6 +25,7 @@ use Modules\Usuarios\Models\User;
     'reference_point',
     'status',
     'cancellation_reason',
+    'completion_note',
     'operator_id',
 ])]
 class RescueRequest extends Model

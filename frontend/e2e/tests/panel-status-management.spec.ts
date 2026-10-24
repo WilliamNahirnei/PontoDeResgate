@@ -1,7 +1,7 @@
 import { test, expect, injectSession } from '../fixtures/auth'
 import { changeRescueRequestStatus, createRescueRequest } from '../fixtures/rescue-requests'
-import { createOperator } from '../fixtures/operators'
-import { holdStatusAction } from '../fixtures/status-actions'
+import { createOperator, loginViaApi } from '../fixtures/operators'
+import { completeThroughDialog, holdStatusAction } from '../fixtures/status-actions'
 
 function card(page, name: string) {
   return page.locator('.rescue-requests-list .v-card', { hasText: name })
@@ -87,7 +87,7 @@ test.describe('Painel — gestão de status do pedido', () => {
     const card = page.locator('.rescue-requests-list .v-card', { hasText: name })
     await expect(card.getByText('Em resgate')).toBeVisible()
 
-    await card.getByRole('button', { name: 'Concluir' }).click()
+    await completeThroughDialog(page, card)
 
     await expect(card.getByText('Concluído')).toBeVisible()
     await expect(card.getByRole('button', { name: 'Concluir' })).toHaveCount(0)
@@ -391,7 +391,7 @@ test.describe('Painel — gestão de status do pedido', () => {
 
     const rescueCard = card(page, rescueRequest.requester_name)
     await expect(rescueCard).toContainText(`Operador responsável: ${otherOperator.name}`)
-    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+    await completeThroughDialog(page, rescueCard)
 
     await expect(rescueCard.getByText('Concluído')).toBeVisible()
   })
@@ -511,6 +511,280 @@ test.describe('Painel — gestão de status do pedido', () => {
     }
   })
 
+  test('ao clicar em "Concluir", o operador vê o campo da observação antes de o pedido ser concluído, e o pedido continua em resgate', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Dialogo ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Concluir pedido')).toBeVisible()
+    await expect(dialog.getByLabel('Observação da conclusão')).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Confirmar conclusão' })).toBeEnabled()
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+  })
+
+  test('operador conclui um pedido informando a observação e o card do pedido concluído mostra essa observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Informada ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    const note = `Família resgatada em segurança ${Date.now()}.`
+
+    await page.goto('/painel')
+    await completeThroughDialog(page, rescueCard, note)
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(`Observação da conclusão: ${note}`)
+  })
+
+  test('operador conclui um pedido sem preencher a observação: o pedido vira concluído e o card não mostra linha de observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Vazia ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await completeThroughDialog(page, rescueCard)
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).not.toContainText('Observação da conclusão')
+  })
+
+  test('observação só com espaços em branco é tratada como não informada: o pedido é concluído e o card não mostra linha de observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Espacos ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await completeThroughDialog(page, rescueCard, '    ')
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).not.toContainText('Observação da conclusão')
+  })
+
+  test('observação com exatamente 1000 caracteres é aceita e aparece completa no card', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs 1000 ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+    const note = `Observação com 1000 caracteres ${Date.now()} `.padEnd(1000, 'o')
+
+    await page.goto('/painel')
+    await completeThroughDialog(page, rescueCard, note)
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(note)
+  })
+
+  test('o campo da observação não aceita mais de 1000 caracteres, digitados ou colados, e o pedido guarda 1000', async ({
+    page,
+    context,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL })
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Limite ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+    const noteField = page.getByLabel('Observação da conclusão')
+
+    // Digitado: com 999 caracteres no campo, só o próximo caractere digitado entra.
+    const typedPrefix = 'd'.repeat(999)
+    await noteField.fill(typedPrefix)
+    await noteField.pressSequentially('XY')
+    await expect(noteField).toHaveValue(`${typedPrefix}X`)
+
+    // Colado: um texto de 1001 caracteres para no 1000º.
+    const pastedNote = `Observação colada ${Date.now()} `.padEnd(1000, 'c')
+    await noteField.fill('')
+    await page.evaluate((text) => navigator.clipboard.writeText(text), `${pastedNote}Z`)
+    await noteField.press('ControlOrMeta+V')
+    await expect(noteField).toHaveValue(pastedNote)
+
+    await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
+
+    await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+    await expect(rescueCard).toContainText(pastedNote)
+    await expect(rescueCard).not.toContainText(`${pastedNote}Z`)
+  })
+
+  test('operador desiste no diálogo da observação: o pedido continua em resgate, com "Concluir" e "Cancelar" disponíveis, e o card não mostra observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Desistir ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+    await page.getByLabel('Observação da conclusão').fill('Texto que não deve ser registrado.')
+    await page.getByRole('button', { name: 'Voltar' }).click()
+
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    await expect(rescueCard.getByRole('button', { name: 'Concluir' })).toBeVisible()
+    await expect(rescueCard.getByRole('button', { name: 'Cancelar' })).toBeVisible()
+    await expect(rescueCard).not.toContainText('Observação da conclusão')
+    await expect(rescueCard).not.toContainText('Texto que não deve ser registrado.')
+  })
+
+  test('o card de um pedido concluído, com ou sem observação, não oferece nenhuma ação para alterar ou incluir a observação', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const unique = Date.now()
+    const withNote = await createRescueRequest(request, { requester_name: `E2E Obs Fixa Com ${unique}` })
+    const withoutNote = await createRescueRequest(request, { requester_name: `E2E Obs Fixa Sem ${unique}` })
+    for (const rescueRequest of [withNote, withoutNote]) {
+      await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    }
+    await changeRescueRequestStatus(request, withNote.id, 'complete', undefined, { completion_note: 'Observação definitiva.' })
+    await changeRescueRequestStatus(request, withoutNote.id, 'complete')
+
+    await page.goto('/painel')
+
+    for (const rescueRequest of [withNote, withoutNote]) {
+      const rescueCard = card(page, rescueRequest.requester_name)
+      await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
+      await expect(rescueCard.getByRole('button', { name: /^(Concluir|Cancelar|Assumir)$/ })).toHaveCount(0)
+      await expect(rescueCard.getByRole('button', { name: /observa/i })).toHaveCount(0)
+      await expect(rescueCard.getByRole('textbox')).toHaveCount(0)
+    }
+  })
+
+  test('um operador diferente do que concluiu o pedido, e o admin master, veem a observação da conclusão no card', async ({
+    page,
+    request,
+    loginAsNewOperator,
+    browser,
+  }) => {
+    const unique = Date.now()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Outros ${unique}` })
+    const completer = await createOperator(request)
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume', completer.token)
+    const note = `Observação visível a todos ${unique}.`
+    await changeRescueRequestStatus(request, rescueRequest.id, 'complete', completer.token, { completion_note: note })
+
+    // Outro operador comum.
+    await loginAsNewOperator()
+    await page.goto('/painel')
+    await expect(card(page, rescueRequest.requester_name)).toContainText(`Observação da conclusão: ${note}`)
+
+    // Admin master, em outro contexto de navegador.
+    const admin = await loginViaApi(request, 'admin@pontoderesgate.local', 'password')
+    const adminContext = await browser.newContext({ baseURL: BASE_URL })
+    const adminPage = await adminContext.newPage()
+    await injectSession(adminPage, admin.token, admin.user)
+    await adminPage.goto('/painel')
+    await expect(card(adminPage, rescueRequest.requester_name)).toContainText(`Observação da conclusão: ${note}`)
+    await adminContext.close()
+  })
+
+  test('o diálogo de cancelamento pede somente o motivo (obrigatório), sem o campo de observação da conclusão', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Cancelar ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+
+    await page.goto('/painel')
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Cancelar' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByLabel('Motivo do cancelamento')).toBeVisible()
+    await expect(dialog.getByLabel('Observação da conclusão')).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Confirmar cancelamento' })).toBeDisabled()
+  })
+
+  test('assumir um pedido pendente não oferece campo de observação: o pedido passa a em resgate direto, sem diálogo', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Assumir ${Date.now()}` })
+    const rescueCard = card(page, rescueRequest.requester_name)
+
+    await page.goto('/painel')
+    await rescueCard.getByRole('button', { name: 'Assumir' }).click()
+
+    await expect(rescueCard.getByText('Em resgate', { exact: true })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByLabel('Observação da conclusão')).toHaveCount(0)
+  })
+
+  test('depois que um operador conclui com observação o pedido enviado pela tela pública, nenhuma tela pública mostra a observação', async ({
+    page,
+    request,
+  }) => {
+    const unique = Date.now()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Publica ${unique}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+    const note = `Observação sigilosa ${unique}.`
+    await changeRescueRequestStatus(request, rescueRequest.id, 'complete', undefined, { completion_note: note })
+
+    for (const publicPath of ['/', '/painel']) {
+      await page.goto(publicPath)
+      await expect(page.getByText(note)).toHaveCount(0)
+      await expect(page.locator('body')).not.toContainText('Observação da conclusão')
+    }
+  })
+
+  test('o campo da observação da conclusão mostra quantos caracteres já foram usados de 1000', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    const rescueRequest = await createRescueRequest(request, { requester_name: `E2E Obs Contador ${Date.now()}` })
+    await changeRescueRequestStatus(request, rescueRequest.id, 'assume')
+
+    await page.goto('/painel')
+    await card(page, rescueRequest.requester_name).getByRole('button', { name: 'Concluir' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText(/^\s*0\s*(\/|de)\s*1000\s*$/)).toBeVisible()
+
+    await page.getByLabel('Observação da conclusão').pressSequentially('Tudo certo')
+    await expect(dialog.getByText(/^\s*10\s*(\/|de)\s*1000\s*$/)).toBeVisible()
+  })
+
   test.describe('ação em andamento (duplo clique)', () => {
     test('duplo clique em Assumir deixa o pedido em resgate, com o operador responsável, sem mensagem de erro', async ({
       page,
@@ -545,7 +819,8 @@ test.describe('Painel — gestão de status do pedido', () => {
 
       await page.goto('/painel')
       const complete = await holdStatusAction(page, rescueRequest.id, 'complete')
-      await rescueCard.getByRole('button', { name: 'Concluir' }).dblclick()
+      await rescueCard.getByRole('button', { name: 'Concluir' }).click()
+      await page.getByRole('button', { name: 'Confirmar conclusão' }).dblclick()
       await complete.releaseAndWait()
 
       await expect(rescueCard.getByText('Concluído', { exact: true })).toBeVisible()
@@ -596,7 +871,8 @@ test.describe('Painel — gestão de status do pedido', () => {
 
       const complete = await holdStatusAction(page, toFinish.id, 'complete')
       await toFinishCard.getByRole('button', { name: 'Concluir' }).click()
-      await expect(toFinishCard.getByRole('button', { name: 'Concluir' })).toBeDisabled()
+      await page.getByRole('button', { name: 'Confirmar conclusão' }).click()
+      await expect(page.getByRole('button', { name: 'Confirmar conclusão' })).toBeDisabled()
       await complete.releaseAndWait()
       await expect(toFinishCard.getByText('Concluído', { exact: true })).toBeVisible()
       await expect(toFinishCard.getByRole('button', { name: 'Concluir' })).toHaveCount(0)
@@ -743,14 +1019,14 @@ test.describe('Painel — gestão de status do pedido', () => {
       await cancelThroughDialog(operatorPage, operatorToCompleteCard, 'Equipe não conseguiu chegar ao local.')
       await expect(operatorToCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
 
-      await toCompleteCard.getByRole('button', { name: 'Concluir' }).click()
+      await completeThroughDialog(page, toCompleteCard)
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toBeVisible()
       await expect(toCompleteCard.getByText('Cancelado', { exact: true })).toBeVisible()
 
       // A recusa acima recarrega a lista de B; só agora A conclui o pedido que B
       // vai tentar cancelar, para o card de B estar de fato desatualizado.
       const operatorToCancelCard = card(operatorPage, toCancel.requester_name)
-      await operatorToCancelCard.getByRole('button', { name: 'Concluir' }).click()
+      await completeThroughDialog(operatorPage, operatorToCancelCard)
       await expect(operatorToCancelCard.getByText('Concluído', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Fechar' }).click()
       await expect(page.getByText(CHANGED_BY_ANOTHER_OPERATOR_MESSAGE)).toHaveCount(0)
@@ -778,7 +1054,7 @@ test.describe('Painel — gestão de status do pedido', () => {
 
       const { context, operatorPage } = await openPanelAsAnotherOperator(browser, request)
       const operatorCard = card(operatorPage, rescueRequest.requester_name)
-      await operatorCard.getByRole('button', { name: 'Concluir' }).click()
+      await completeThroughDialog(operatorPage, operatorCard)
       await expect(operatorCard.getByText('Concluído', { exact: true })).toBeVisible()
 
       await page.getByRole('button', { name: 'Confirmar cancelamento' }).click()

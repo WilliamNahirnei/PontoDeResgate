@@ -109,4 +109,85 @@ class RescueRequestStatusManagementTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(3, 'data');
     }
+
+    public function test_operator_can_complete_a_rescue_request_with_a_note(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete", [
+            'completion_note' => 'Família resgatada em segurança.',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.status', RescueRequestStatus::Concluido->value);
+        $response->assertJsonPath('data.completion_note', 'Família resgatada em segurança.');
+    }
+
+    public function test_completion_note_is_optional(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.completion_note', null);
+    }
+
+    public function test_a_blank_completion_note_is_treated_as_not_informed(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete", [
+            'completion_note' => '   ',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.completion_note', null);
+    }
+
+    public function test_completion_note_accepts_exactly_1000_characters(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete", [
+            'completion_note' => str_repeat('a', 1000),
+        ]);
+
+        $response->assertOk();
+        $this->assertSame(1000, strlen($response->json('data.completion_note')));
+    }
+
+    public function test_completion_note_over_1000_characters_is_rejected_and_the_request_stays_in_progress(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $response = $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete", [
+            'completion_note' => str_repeat('a', 1001),
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['completion_note']);
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'status' => RescueRequestStatus::EmResgate->value,
+        ]);
+        $this->assertDatabaseCount('rescue_status_logs', 0);
+    }
+
+    public function test_a_failed_completion_does_not_record_the_note(): void
+    {
+        $operator = User::factory()->create();
+        $rescueRequest = RescueRequest::factory()->create();
+
+        $this->actingAs($operator)->postJson("/api/rescue-requests/{$rescueRequest->id}/complete", [
+            'completion_note' => 'Não deveria gravar.',
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('rescue_requests', ['id' => $rescueRequest->id, 'completion_note' => null]);
+    }
 }

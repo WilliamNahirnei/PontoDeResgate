@@ -649,4 +649,21 @@ class RescueRequestRepositoryTest extends TestCase
 
         $this->assertCount(6, $first->pluck('id')->merge($second->pluck('id'))->unique());
     }
+
+    #[TestDox('updateStatus() deve persistir a observação da conclusão junto com o novo status.')]
+    public function test_update_status_persists_the_completion_note(): void
+    {
+        $rescueRequest = RescueRequest::factory()->emResgate()->create();
+
+        $this->repository->updateStatus($rescueRequest, [
+            'completion_note' => 'Família resgatada em segurança.',
+            'status' => RescueRequestStatus::Concluido,
+        ]);
+
+        $this->assertDatabaseHas('rescue_requests', [
+            'id' => $rescueRequest->id,
+            'completion_note' => 'Família resgatada em segurança.',
+            'status' => RescueRequestStatus::Concluido->value,
+        ]);
+    }
 }

@@ -5,6 +5,7 @@ import RescueRequestsMap from '@/components/RescueRequestsMap.vue'
 import RescueRequestsList from '@/components/RescueRequestsList.vue'
 import RescueRequestsPagination from '@/components/RescueRequestsPagination.vue'
 import CancelRescueRequestDialog from '@/components/CancelRescueRequestDialog.vue'
+import CompleteRescueRequestDialog from '@/components/CompleteRescueRequestDialog.vue'
 import { MAX_QUANTITY, isValidQuantity, quantityRules } from '@/utils/quantity'
 
 const STATUS_OPTIONS = [
@@ -64,6 +65,7 @@ const selectedId = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 const cancelDialogRequest = ref(null)
+const completeDialogRequest = ref(null)
 const shareFeedback = ref(false)
 // Link mostrado para cópia manual quando a cópia automática falha.
 const manualShareUrl = ref('')
@@ -72,6 +74,11 @@ const actionErrorMessage = ref('')
 const actionsInProgress = ref([])
 const cancelInProgress = computed(
   () => Boolean(cancelDialogRequest.value) && actionsInProgress.value.includes(actionKey(cancelDialogRequest.value.id, 'cancel')),
+)
+const completeInProgress = computed(
+  () =>
+    Boolean(completeDialogRequest.value) &&
+    actionsInProgress.value.includes(actionKey(completeDialogRequest.value.id, 'complete')),
 )
 
 const DEFAULT_ACTION_ERROR_MESSAGE = 'Não foi possível alterar o pedido. Tente novamente.'
@@ -224,6 +231,7 @@ async function runStatusAction(rescueRequest, action, data) {
 
   if (shouldRefresh) {
     cancelDialogRequest.value = null
+    completeDialogRequest.value = null
     await fetchRescueRequests()
   }
   actionsInProgress.value = actionsInProgress.value.filter((inProgress) => inProgress !== key)
@@ -233,8 +241,13 @@ function handleAssume(rescueRequest) {
   return runStatusAction(rescueRequest, 'assume')
 }
 
-function handleComplete(rescueRequest) {
-  return runStatusAction(rescueRequest, 'complete')
+function openCompleteDialog(rescueRequest) {
+  completeDialogRequest.value = rescueRequest
+}
+
+// A observação é opcional: sem texto, a conclusão é enviada sem ela.
+function handleCompleteConfirm(note) {
+  return runStatusAction(completeDialogRequest.value, 'complete', note ? { completion_note: note } : undefined)
 }
 
 function openCancelDialog(rescueRequest) {
@@ -342,7 +355,7 @@ onMounted(fetchRescueRequests)
           :actions-in-progress="actionsInProgress"
           @select="handleSelect"
           @assume="handleAssume"
-          @complete="handleComplete"
+          @complete="openCompleteDialog"
           @cancel="openCancelDialog"
           @share="shareLocation"
         />
@@ -360,6 +373,13 @@ onMounted(fetchRescueRequests)
         />
       </div>
     </div>
+
+    <CompleteRescueRequestDialog
+      :model-value="Boolean(completeDialogRequest)"
+      :confirming="completeInProgress"
+      @update:model-value="(value) => { if (!value) completeDialogRequest = null }"
+      @confirm="handleCompleteConfirm"
+    />
 
     <CancelRescueRequestDialog
       :model-value="Boolean(cancelDialogRequest)"

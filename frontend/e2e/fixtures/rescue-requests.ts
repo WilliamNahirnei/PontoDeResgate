@@ -76,13 +76,14 @@ export async function changeRescueRequestStatus(
   rescueRequestId: number,
   action: StatusAction,
   token?: string,
+  data?: Record<string, unknown>,
 ): Promise<void> {
   const authToken = token ?? (await getAdminToken(request))
-  const data = action === 'cancel' ? { cancellation_reason: 'Cancelado como preparação de teste E2E.' } : undefined
+  const body = data ?? (action === 'cancel' ? { cancellation_reason: 'Cancelado como preparação de teste E2E.' } : undefined)
 
   const response = await request.post(`${API_BASE_URL}/api/rescue-requests/${rescueRequestId}/${action}`, {
     headers: { Authorization: `Bearer ${authToken}` },
-    data,
+    data: body,
   })
 
   if (!response.ok()) {

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Resgates\Models\RescueRequest;
 use Modules\Resgates\Models\RescueStatusLog;
 use Modules\Usuarios\Models\User;
 use Tests\TestCase;
@@ -27,6 +28,7 @@ class RescueStatusLogListingTest extends TestCase
                 'operator' => ['id', 'name', 'email', 'role', 'active'],
                 'previous_status',
                 'new_status',
+                'observation',
                 'created_at',
             ]],
             'meta' => ['current_page', 'last_page', 'total'],
@@ -59,5 +61,31 @@ class RescueStatusLogListingTest extends TestCase
         $response = $this->getJson('/api/rescue-status-logs');
 
         $response->assertUnauthorized();
+    }
+
+    public function test_log_entries_expose_the_observation_of_a_cancellation_and_of_a_completion(): void
+    {
+        $adminMaster = User::factory()->adminMaster()->create();
+        $operator = User::factory()->create();
+        $cancelled = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+        $completed = RescueRequest::factory()->emResgate()->create(['operator_id' => $operator->id]);
+
+        $this->actingAs($operator)->postJson("/api/rescue-requests/{$cancelled->id}/cancel", [
+            'cancellation_reason' => 'Endereço não encontrado.',
+        ])->assertOk();
+        $this->actingAs($operator)->postJson("/api/rescue-requests/{$completed->id}/complete", [
+            'completion_note' => 'Família resgatada em segurança.',
+        ])->assertOk();
+
+        $logs = collect($this->actingAs($adminMaster)->getJson('/api/rescue-status-logs')->assertOk()->json('data'));
+
+        $this->assertSame(
+            'Endereço não encontrado.',
+            $logs->firstWhere(fn ($log) => $log['rescue_request']['id'] === $cancelled->id)['observation']
+        );
+        $this->assertSame(
+            'Família resgatada em segurança.',
+            $logs->firstWhere(fn ($log) => $log['rescue_request']['id'] === $completed->id)['observation']
+        );
     }
 }

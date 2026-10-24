@@ -48,6 +48,7 @@ class RescueRequestResourceTest extends TestCase
             'reference_point' => 'Casa azul, próximo à ponte.',
             'status' => 'cancelado',
             'cancellation_reason' => 'Solicitante desistiu.',
+            'completion_note' => null,
             'created_at' => '2026-09-19T10:00:00.000000Z',
             'updated_at' => '2026-09-19T11:30:00.000000Z',
         ], $data);
@@ -66,6 +67,7 @@ class RescueRequestResourceTest extends TestCase
             'animals_count' => null,
             'reference_point' => null,
             'cancellation_reason' => null,
+            'completion_note' => null,
         ]);
 
         $data = (new RescueRequestResource($rescueRequest))->response()->getData(true)['data'];
@@ -79,6 +81,7 @@ class RescueRequestResourceTest extends TestCase
         $this->assertNull($data['animals_count']);
         $this->assertNull($data['reference_point']);
         $this->assertNull($data['cancellation_reason']);
+        $this->assertNull($data['completion_note']);
     }
 
     #[TestDox('A resposta não deve incluir a chave "operator" quando a relação não foi carregada.')]
@@ -123,5 +126,18 @@ class RescueRequestResourceTest extends TestCase
             'role' => 'operador',
             'active' => true,
         ], $data['operator']);
+    }
+
+    #[TestDox('A resposta deve expor a observação da conclusão do pedido concluído.')]
+    public function test_it_exposes_the_completion_note(): void
+    {
+        $rescueRequest = RescueRequest::factory()->make([
+            'status' => RescueRequestStatus::Concluido,
+            'completion_note' => 'Família resgatada em segurança.',
+        ]);
+
+        $data = (new RescueRequestResource($rescueRequest))->response()->getData(true)['data'];
+
+        $this->assertSame('Família resgatada em segurança.', $data['completion_note']);
     }
 }
