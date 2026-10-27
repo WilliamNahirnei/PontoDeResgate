@@ -93,4 +93,4 @@ Boas formas de começar:
 
 ## Licença
 
-[MIT](LICENSE)
+[GNU GPL v3.0](LICENSE): quem modificar e distribuir este código deve publicá-lo sob a mesma licença.
