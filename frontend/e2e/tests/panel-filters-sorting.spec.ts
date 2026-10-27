@@ -235,6 +235,26 @@ test.describe('Painel — filtros e ordenação', () => {
     await expect(card(page, bigName)).toBeVisible()
   })
 
+  test('"Limpar filtros" volta o status para todos e a ordenação para data/hora, do mais recente para o mais antigo', async ({
+    page,
+    request,
+    loginAsAdminMaster,
+  }) => {
+    await loginAsAdminMaster()
+    await page.goto('/painel')
+
+    await selectOption(page, 'Status', 'Cancelado')
+    await page.locator('button:has(i.mdi-sort-ascending)').click()
+    await expect(page.getByRole('combobox', { name: 'Status' })).toHaveValue('Cancelado')
+
+    await page.getByRole('button', { name: 'Filtrar por quantidade' }).click()
+    await page.getByRole('button', { name: 'Limpar filtros', exact: true }).click()
+
+    await expect(page.getByText('Todos os status')).toBeVisible()
+    await expect(page.locator('button.v-btn--active:has(i.mdi-sort-descending)')).toBeVisible()
+    await expect(page.locator('button.v-btn--active:has(i.mdi-sort-ascending)')).toHaveCount(0)
+  })
+
   test('filtro por quantidade mínima funciona para cada categoria, não só para o total', async ({
     page,
     request,

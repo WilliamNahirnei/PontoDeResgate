@@ -95,11 +95,19 @@ const sortField = ref('created_at')
 const sortDirection = ref('desc')
 
 function clearQuantityFilters() {
-  const hadFilters = mineOnly.value || QUANTITY_FIELDS.some(({ field }) => minQuantities.value[field] !== '')
+  const hadFilters =
+    mineOnly.value ||
+    statusFilter.value !== 'all' ||
+    sortField.value !== 'created_at' ||
+    sortDirection.value !== 'desc' ||
+    QUANTITY_FIELDS.some(({ field }) => minQuantities.value[field] !== '')
   for (const { field } of QUANTITY_FIELDS) {
     minQuantities.value[field] = ''
   }
   mineOnly.value = false
+  statusFilter.value = 'all'
+  sortField.value = 'created_at'
+  sortDirection.value = 'desc'
 
   // Sem nenhum filtro para limpar, o watcher dos filtros não dispara: volta à
   // primeira página daqui.
